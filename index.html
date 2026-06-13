@@ -114,6 +114,13 @@ body{
 .discards.d2{--tile-disc:clamp(23px,3.5vmin,40px);}
 .discards.d3{--tile-disc:clamp(19px,2.9vmin,33px);}
 .discards.d4{--tile-disc:clamp(15px,2.3vmin,26px);}
+.tile.tilepic{overflow:hidden;}
+.tile.tilepic .face{position:absolute;top:7%;left:5%;right:5%;bottom:7%;}
+.t-idx{position:absolute;top:0;left:2px;font-weight:800;color:inherit;line-height:1.05;
+  font-size:calc(var(--tile)*.32);text-shadow:0 0 2px #fff,0 0 2px #fff;}
+.hand .tile .t-idx{font-size:calc(var(--tile-lg)*.3);}
+.tile.disc .t-idx{font-size:calc(var(--tile-disc)*.44);left:1px;}
+.tile.small .t-idx{font-size:calc(var(--tile)*.42);}
 .flowers-mini{display:flex;gap:2px;flex-wrap:wrap;}
 #hand-wrap{display:flex;flex-direction:column;align-items:center;gap:.4vmin;width:100%;}
 .hand{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:.4vmin;
@@ -1049,16 +1056,49 @@ function loadSettings(){
 function saveSettings(){ try{ localStorage.setItem('mj16_settings', JSON.stringify(settings)); }catch(e){} }
 
 /* ---------------- tiles ---------------- */
+var PIPS={
+ 1:[[50,67]],
+ 2:[[50,40],[50,94]],
+ 3:[[28,34],[50,67],[72,100]],
+ 4:[[33,40],[67,40],[33,94],[67,94]],
+ 5:[[33,40],[67,40],[50,67],[33,94],[67,94]],
+ 6:[[33,34],[67,34],[33,67],[67,67],[33,100],[67,100]],
+ 7:[[30,28],[50,26],[70,28],[33,72],[67,72],[33,104],[67,104]],
+ 8:[[33,26],[67,26],[33,52],[67,52],[33,82],[67,82],[33,108],[67,108]],
+ 9:[[30,32],[50,32],[70,32],[30,67],[50,67],[70,67],[30,102],[50,102],[70,102]]
+};
+function pipSVG(suit,num){
+  var pts=PIPS[num]||[], body='';
+  for(var i=0;i<pts.length;i++){
+    var x=pts[i][0], y=pts[i][1];
+    if(suit==='p'){            // 筒 = dots
+      var r=(num===1)?16:12;
+      body+='<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#1763c7"/>'+
+            '<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.55)+'" fill="#fff"/>'+
+            '<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.26)+'" fill="#cc2222"/>';
+    } else {                   // 條 = bamboo
+      var hh=(num>=7)?22:28, w=10;
+      body+='<rect x="'+(x-w/2)+'" y="'+(y-hh/2)+'" width="'+w+'" height="'+hh+'" rx="4" fill="#1d7a36"/>'+
+            '<rect x="'+(x-w/2)+'" y="'+(y-1.5)+'" width="'+w+'" height="3" fill="#0d4f23"/>'+
+            '<rect x="'+(x-1.5)+'" y="'+(y-hh/2)+'" width="3" height="'+hh+'" rx="1.5" fill="#56c074" opacity="0.7"/>';
+    }
+  }
+  return '<svg class="face" viewBox="0 0 100 134" preserveAspectRatio="xMidYMid meet">'+body+'</svg>';
+}
 function tileHTML(kind, opts){
   opts = opts || {};
   if(opts.faceDown) return '<div class="tile back'+(opts.small?' small':'')+'"></div>';
-  var cls='tile', suit=kind.charAt(0), main='', sub='';
-  if(MJ.isNumber(kind)){ cls+=' suit-'+suit; main=MJ.CN_NUM[(+kind.charAt(1))-1]; sub=MJ.NAME[suit]; }
-  else if(kind==='dr'){ cls+=' drg-r'; main='中'; }
-  else if(kind==='dg'){ cls+=' drg-g'; main='發'; }
-  else if(kind==='dw'){ cls+=' drg-w'; main='白'; }
-  else if(suit==='w'){ cls+=' wind'; main=MJ.NAME[kind]; }
-  else if(MJ.isFlower(kind)){ cls+=' flower'; main=MJ.NAME[kind]; sub=((+kind.slice(2))<=4?'花':'季'); }
+  var cls='tile', suit=kind.charAt(0), inner='';
+  if(MJ.isNumber(kind)){
+    var num=+kind.charAt(1); cls+=' suit-'+suit;
+    if(suit==='m'){ inner='<span class="t-main">'+MJ.CN_NUM[num-1]+'</span><span class="t-sub">萬</span>'; }
+    else { cls+=' tilepic'; inner=pipSVG(suit,num)+'<span class="t-idx">'+num+'</span>'; }
+  }
+  else if(kind==='dr'){ cls+=' drg-r'; inner='<span class="t-main">中</span>'; }
+  else if(kind==='dg'){ cls+=' drg-g'; inner='<span class="t-main">發</span>'; }
+  else if(kind==='dw'){ cls+=' drg-w'; inner='<span class="t-main">白</span>'; }
+  else if(suit==='w'){ cls+=' wind'; inner='<span class="t-main">'+MJ.NAME[kind]+'</span>'; }
+  else if(MJ.isFlower(kind)){ cls+=' flower'; inner='<span class="t-main">'+MJ.NAME[kind]+'</span><span class="t-sub">'+((+kind.slice(2))<=4?'花':'季')+'</span>'; }
   if(opts.small) cls+=' small';
   if(opts.disc) cls+=' disc';
   if(opts.hl) cls+=' hl';
@@ -1067,9 +1107,9 @@ function tileHTML(kind, opts){
   if(opts.clickable) cls+=' clickable';
   var data = (opts.id!=null) ? (' data-id="'+opts.id+'"') : '';
   var badge = opts.badge ? ('<span class="t-badge">'+opts.badge+'</span>') : '';
-  return '<div class="'+cls+'"'+data+'>'+badge+'<span class="t-main">'+main+'</span>'+
-         (sub?'<span class="t-sub">'+sub+'</span>':'')+'</div>';
+  return '<div class="'+cls+'"'+data+'>'+badge+inner+'</div>';
 }
+
 function meldHTML(m){
   var html='<div class="meld">';
   if(m.type==='chow'){
