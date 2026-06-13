@@ -52,7 +52,12 @@ body{
 #seat1 .nameplate,#seat1 .tilerow,#seat1 .melds,#seat1 .discards,#seat1 .flowers-mini{justify-content:flex-end;}
 #seat0 .melds,#seat0 .discards,#seat0 .flowers-mini{justify-content:center;}
 .op-hand{flex-wrap:nowrap;overflow:hidden;max-width:100%;}
-#center{grid-area:ce; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6vmin; min-height:0;}
+#center{grid-area:ce; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:.4vmin; min-height:0; overflow:hidden;}
+#centerhead{display:flex;align-items:center;gap:.8vmin;flex-wrap:wrap;justify-content:center;}
+#wallmini{font-weight:800;font-size:clamp(13px,2.2vmin,20px);color:#d9f0e0;}
+#wallmini b{color:var(--gold);font-size:1.35em;}
+#river{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-content:flex-start;max-width:100%;flex:1 1 auto;overflow:hidden;padding:.3vmin;}
+.t-badge{position:absolute;top:-1px;left:0;font-size:calc(var(--tile-disc)*.4);font-weight:800;color:#1b1b1b;background:rgba(255,255,255,.8);border-radius:0 0 4px 0;padding:0 2px;line-height:1.2;}
 .nameplate{display:flex;align-items:center;gap:.8vmin;justify-content:center;flex-wrap:wrap;}
 .nameplate.me{justify-content:center;}
 .avatar{font-size:clamp(30px,5.8vmin,58px);line-height:1;
@@ -112,7 +117,7 @@ body{
 #statusline{font-size:clamp(14px,2.4vmin,24px);font-weight:800;min-height:1.2em;text-align:center;}
 #statusline .ting{color:var(--hl);}
 #wallinfo{display:flex;flex-direction:column;align-items:center;gap:.3vmin;}
-#wallnum{font-size:clamp(26px,7vmin,64px);font-weight:900;color:var(--gold);line-height:1;}
+#wallnum{color:var(--gold);}
 #walllabel{font-size:clamp(11px,1.8vmin,16px);color:#d9f0e0;}
 .round-pill{background:#0e3527;border:2px solid #2f6b4f;border-radius:20px;
   padding:.4vmin 1.6vmin;font-weight:800;font-size:clamp(13px,2.2vmin,22px);}
@@ -186,8 +191,8 @@ body{
   <div class="seat" id="seat2"></div>
   <div class="seat" id="seat3"></div>
   <div id="center">
-    <div class="round-pill" id="round-info">東風圈</div>
-    <div id="wallinfo"><div id="wallnum">--</div><div id="walllabel">剩餘牌數</div></div>
+    <div id="centerhead"><span class="round-pill" id="round-info">東風圈</span><span id="wallmini">牌 <b id="wallnum">--</b></span></div>
+    <div id="river"></div>
     <div id="centermsg"></div>
   </div>
   <div class="seat" id="seat1"></div>
@@ -842,7 +847,7 @@ Game.prototype.doPung = function (seat, discarder, kind) {
   var claimed = this.removeFromDiscard(discarder);
   var two = this.takeFromHand(p, kind, 2);
   p.melds.push({ type: 'pung', kind: kind, tiles: two.concat([claimed]), from: discarder });
-  this.emit({ type: 'meld', seat: seat, kind: 'pung', tile: kind, voice: '碰' });
+  this.emit({ type: 'meld', seat: seat, kind: 'pung', tile: kind, voice: '碰', claim: true });
   this.emit({ type: 'render' });
   this.turn = seat;
   var self = this;
@@ -857,7 +862,7 @@ Game.prototype.doChow = function (seat, discarder, kind, pairIdx) {
   var t2 = this.takeFromHand(p, MJ.indexToKind(pairIdx[1]), 1)[0];
   var base = Math.min(pairIdx[0], pairIdx[1], MJ.kindToIndex(kind));
   p.melds.push({ type: 'chow', kind: MJ.indexToKind(base), tiles: [t1, t2, claimed], from: discarder });
-  this.emit({ type: 'meld', seat: seat, kind: 'chow', tile: kind, voice: '吃' });
+  this.emit({ type: 'meld', seat: seat, kind: 'chow', tile: kind, voice: '吃', claim: true });
   this.emit({ type: 'render' });
   this.turn = seat;
   var self = this;
@@ -870,7 +875,7 @@ Game.prototype.doKongFromDiscard = function (seat, discarder, kind) {
   var claimed = this.removeFromDiscard(discarder);
   var three = this.takeFromHand(p, kind, 3);
   p.melds.push({ type: 'kong', kind: kind, tiles: three.concat([claimed]), from: discarder });
-  this.emit({ type: 'meld', seat: seat, kind: 'kong', tile: kind, voice: '槓' });
+  this.emit({ type: 'meld', seat: seat, kind: 'kong', tile: kind, voice: '槓', claim: true });
   // draw replacement
   var rep = this.drawTail();
   if (!rep) return this.endDraw();
@@ -898,7 +903,7 @@ Game.prototype.applySelfKong = function (p, kg) {
   var rep = this.drawTail();
   if (rep) { p.hand.push(rep); p._byKong = true; this.replaceFlowers(p.seat, true); }
   this.sortHand(p);
-  this.emit({ type: 'meld', seat: p.seat, kind: 'kong', tile: kg.kind, voice: '槓' });
+  this.emit({ type: 'meld', seat: p.seat, kind: 'kong', tile: kg.kind, voice: '槓', claim: false });
 };
 
 /* ---- AI claim decision ---- */
@@ -1029,7 +1034,8 @@ var currentAsk = null;
 var hintKind = null;
 var bubbles = {};       // seat -> {text, t}
 var lastDiscardKey = null;
-var DISC_MAX = 16;   // show most-recent N discards per player (keeps rivers tidy)
+var riverLog = [];   // {seat,k} chronological shared discard pile
+var RIVER_MAX = 24;  // show most-recent N discards in the shared central river
 
 function loadSettings(){
   var d = { assist:true, sound:true, voice:true, difficulty:'normal' };
@@ -1056,7 +1062,8 @@ function tileHTML(kind, opts){
   if(opts.drawn) cls+=' justdrawn';
   if(opts.clickable) cls+=' clickable';
   var data = (opts.id!=null) ? (' data-id="'+opts.id+'"') : '';
-  return '<div class="'+cls+'"'+data+'><span class="t-main">'+main+'</span>'+
+  var badge = opts.badge ? ('<span class="t-badge">'+opts.badge+'</span>') : '';
+  return '<div class="'+cls+'"'+data+'>'+badge+'<span class="t-main">'+main+'</span>'+
          (sub?'<span class="t-sub">'+sub+'</span>':'')+'</div>';
 }
 function meldHTML(m){
@@ -1080,6 +1087,7 @@ function el(id){ return document.getElementById(id); }
 function render(){
   if(!G) return;
   for(var s=0;s<4;s++) renderSeat(s);
+  renderRiver();
   el('wallnum').textContent = G.wallRemaining();
   var rw = MJ.NAME[G.roundWind];
   el('round-info').textContent = rw+'風圈 ・ '+G.players[G.dealer].name+'做莊'+(G.dealerStreak?(' (連'+G.dealerStreak+'莊)'):'');
@@ -1104,17 +1112,8 @@ function renderSeat(s){
   // melds
   var melds='';
   if(p.melds.length){ melds='<div class="melds">'; for(var m=0;m<p.melds.length;m++) melds+=meldHTML(p.melds[m]); melds+='</div>'; }
-  // discards
-  var disc='<div class="discards">';
-  var dStart = Math.max(0, p.discards.length - DISC_MAX);
-  for(var d=dStart; d<p.discards.length; d++){
-    var hl = (lastDiscardKey===s+'#'+d);
-    disc+=tileHTML(p.discards[d].k,{disc:true, hl:hl});
-  }
-  disc+='</div>';
-
   if(s===0){
-    c.innerHTML = head + melds + fl + disc;
+    c.innerHTML = head + melds + fl;
     var mh = el('myhand'); if(mh) mh.innerHTML = '<div class="hand" id="hand"></div>';
     renderHand();
   } else {
@@ -1123,7 +1122,7 @@ function renderSeat(s){
     var cnt = p.hand.length;
     for(var i=0;i<cnt;i++) hand+=tileHTML('', {faceDown:true});
     hand+='</div>';
-    c.innerHTML = head + hand + melds + fl + disc;
+    c.innerHTML = head + hand + melds + fl;
   }
 }
 
@@ -1158,18 +1157,31 @@ function renderStatus(){
   } else { sl.textContent=''; }
 }
 
+function renderRiver(){
+  var r = el('river'); if(!r) return;
+  var start = Math.max(0, riverLog.length - RIVER_MAX);
+  var html='';
+  for(var i=start;i<riverLog.length;i++){
+    var d=riverLog[i];
+    var hl=(i===riverLog.length-1);
+    html += tileHTML(d.k, { disc:true, hl:hl, badge: MJ.NAME[G.players[d.seat].seatWind] });
+  }
+  r.innerHTML = html;
+}
+
 /* ---------------- events from engine ---------------- */
 function onEvent(e){
   switch(e.type){
     case 'render': render(); break;
     case 'handStart':
-      bubbles={}; currentAsk=null; lastDiscardKey=null; hintKind=null;
+      bubbles={}; currentAsk=null; lastDiscardKey=null; hintKind=null; riverLog=[];
       clearActions(); hideOverlay(); render(); break;
     case 'draw': sound('draw'); break;
     case 'discard':
-      lastDiscardKey = e.seat+'#'+(G.players[e.seat].discards.length-1);
+      riverLog.push({ seat:e.seat, k:e.tile });
       sound('discard'); render(); break;
     case 'meld':
+      if(e.claim) riverLog.pop();   // claimed tile leaves the river
       bubble(e.seat, e.voice||'');
       if(e.voice) speak(e.voice);
       sound('meld'); render(); break;
