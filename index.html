@@ -47,14 +47,15 @@ body{
 }
 .seat{padding:.5vmin; border-radius:12px; min-width:0; min-height:0; overflow:hidden;}
 #seat2{grid-area:s2;} #seat1{grid-area:s1;} #seat3{grid-area:s3;} #seat0{grid-area:s0;}
-#seat2 .nameplate,#seat2 .tilerow,#seat2 .melds,#seat2 .discards{justify-content:center;}
-#seat1 .nameplate,#seat1 .tilerow,#seat1 .melds,#seat1 .discards{justify-content:flex-end;}
+#seat2 .nameplate,#seat2 .tilerow,#seat2 .melds,#seat2 .discards,#seat2 .flowers-mini{justify-content:center;}
+#seat1 .nameplate,#seat1 .tilerow,#seat1 .melds,#seat1 .discards,#seat1 .flowers-mini{justify-content:flex-end;}
+#seat0 .melds,#seat0 .discards,#seat0 .flowers-mini{justify-content:center;}
 .op-hand{flex-wrap:nowrap;overflow:hidden;max-width:100%;}
 #center{grid-area:ce; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6vmin; min-height:0;}
 .nameplate{display:flex;align-items:center;gap:.8vmin;justify-content:center;flex-wrap:wrap;}
-.nameplate.me{justify-content:flex-start;}
-.avatar{font-size:clamp(20px,4vmin,40px);line-height:1;
-  background:#0e3527;border-radius:50%;padding:.3vmin .5vmin;border:2px solid #2f6b4f;}
+.nameplate.me{justify-content:center;}
+.avatar{font-size:clamp(30px,5.8vmin,58px);line-height:1;
+  background:#0e3527;border-radius:50%;padding:.4vmin .7vmin;border:2px solid #2f6b4f;}
 .nm{font-weight:800;font-size:clamp(13px,2.2vmin,22px);}
 .wind-badge{background:var(--gold);color:#3a2c00;font-weight:800;border-radius:8px;
   padding:.1vmin .9vmin;font-size:clamp(13px,2.1vmin,21px);}
@@ -87,9 +88,9 @@ body{
 .tile.drg-w .t-main{color:#1763c7;}
 .tile.flower{background:linear-gradient(#fff7df,#f4e3a8);border-color:#d6b94e;}
 .tile.flower .t-main{color:#b8860b;}
-.tile.back{background:linear-gradient(135deg,#1e7d54,#0d5c3a);border:1px solid #0a4e33;
-  box-shadow:inset 0 0 0 3px rgba(255,255,255,.12),0 2px 3px rgba(0,0,0,.3);}
-.tile.back::after{content:"🀄";font-size:calc(var(--tile)*.5);color:rgba(255,255,255,.25);}
+.tile.back{background:linear-gradient(135deg,#3a78c2,#1f4f8a);border:1px solid #173f6e;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.18),0 2px 3px rgba(0,0,0,.3);}
+.tile.back::after{content:"";}
 .tile.clickable{cursor:pointer;transition:transform .08s;}
 .tile.clickable:hover{transform:translateY(-8px);}
 .tile.clickable:active{transform:translateY(-4px);}
