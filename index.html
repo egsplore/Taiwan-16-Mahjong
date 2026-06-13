@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>台灣十六張麻將</title>
+<style>
+:root{
+  --tile:clamp(34px,5.4vmin,60px);
+  --tile-h:calc(var(--tile)*1.34);
+  --tile-lg:clamp(46px,8.4vmin,84px);
+  --tile-lg-h:calc(var(--tile-lg)*1.34);
+  --ivory:#f7f3e6; --ivory2:#ece5d0; --ink:#222;
+  --felt:#0c5a3a; --felt2:#0a4e33; --gold:#e9c45a;
+  --hl:#ffe680; --good:#2e9e5b; --warn:#d9534f; --blue:#1763c7;
+  --ui:#143a2c; --uitext:#f3efe2;
+  font-size:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;}
+body{
+  font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+  background:radial-gradient(circle at 50% 38%,#12724a,var(--felt) 60%,var(--felt2));
+  color:#fff; overflow:hidden; user-select:none; -webkit-user-select:none;
+  height:100dvh; display:flex; flex-direction:column;
+}
+#topbar{
+  display:flex; align-items:center; gap:.5vmin; padding:.6vmin 1.2vmin;
+  background:var(--ui); flex:0 0 auto; flex-wrap:wrap;
+}
+#topbar .title{font-weight:800;font-size:clamp(15px,2.4vmin,24px);color:var(--gold);margin-right:auto;letter-spacing:1px;}
+.tbtn{
+  font-family:inherit; font-size:clamp(13px,2vmin,19px); font-weight:700;
+  background:#21513c; color:#f3efe2; border:2px solid #2f6b4f; border-radius:10px;
+  padding:.7vmin 1.4vmin; cursor:pointer; line-height:1.1; white-space:nowrap;
+}
+.tbtn:active{transform:translateY(1px);}
+.tbtn.on{background:var(--gold);color:#3a2c00;border-color:var(--gold);}
+.tbtn.diff{min-width:3.6em;}
+.diffgroup{display:flex;gap:3px;background:#103022;border-radius:12px;padding:3px;}
+#table{flex:1 1 auto; position:relative; display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,2.1fr) minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"s2 s2 s2" "s3 ce s1" "s0 s0 s0";
+  gap:.4vmin; padding:.6vmin;
+}
+.seat{padding:.5vmin; border-radius:12px; min-width:0;}
+#seat2{grid-area:s2;} #seat1{grid-area:s1;} #seat3{grid-area:s3;} #seat0{grid-area:s0;}
+#center{grid-area:ce; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6vmin; min-height:0;}
+.nameplate{display:flex;align-items:center;gap:.8vmin;justify-content:center;flex-wrap:wrap;}
+.nameplate.me{justify-content:flex-start;}
+.avatar{font-size:clamp(20px,4vmin,40px);line-height:1;
+  background:#0e3527;border-radius:50%;padding:.3vmin .5vmin;border:2px solid #2f6b4f;}
+.nm{font-weight:800;font-size:clamp(13px,2.2vmin,22px);}
+.wind-badge{background:var(--gold);color:#3a2c00;font-weight:800;border-radius:8px;
+  padding:.1vmin .9vmin;font-size:clamp(13px,2.1vmin,21px);}
+.score{font-size:clamp(12px,1.9vmin,18px);color:#d9f0e0;}
+.turn-on .avatar{border-color:var(--hl);box-shadow:0 0 0 3px var(--hl),0 0 14px var(--hl);}
+.bubble{background:#fff;color:#1b1b1b;font-weight:800;border-radius:14px;
+  padding:.3vmin 1.2vmin;font-size:clamp(14px,2.4vmin,24px);
+  box-shadow:0 2px 8px rgba(0,0,0,.35);animation:pop .25s ease;}
+@keyframes pop{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+.tilerow{display:flex;flex-wrap:wrap;gap:3px;align-items:center;}
+.tilerow.center-h{justify-content:center;}
+.melds{display:flex;flex-wrap:wrap;gap:6px;margin:.3vmin 0;}
+.meld{display:flex;gap:2px;background:rgba(0,0,0,.18);padding:2px;border-radius:8px;}
+.discards{display:flex;flex-wrap:wrap;gap:2px;max-width:100%;
+  min-height:calc(var(--tile-h));align-content:flex-start;}
+.tile{
+  width:var(--tile);height:var(--tile-h);background:linear-gradient(#fff,var(--ivory));
+  border-radius:7px;border:1px solid #cabf9c;box-shadow:0 1px 0 #b3a878,0 2px 3px rgba(0,0,0,.3);
+  color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  line-height:.95;position:relative;flex:0 0 auto;overflow:hidden;
+}
+.tile .t-main{font-weight:800;font-size:calc(var(--tile)*.62);}
+.tile .t-sub{font-weight:700;font-size:calc(var(--tile)*.34);margin-top:1px;}
+.hand .tile{width:var(--tile-lg);height:var(--tile-lg-h);border-radius:10px;}
+.hand .tile .t-main{font-size:calc(var(--tile-lg)*.6);}
+.hand .tile .t-sub{font-size:calc(var(--tile-lg)*.32);}
+.tile.suit-m{color:#1b1b1b;} .tile.suit-p{color:var(--blue);} .tile.suit-s{color:#1d7a36;}
+.tile.wind{color:#1b1b1b;}
+.tile.drg-r .t-main{color:#cc2222;} .tile.drg-g .t-main{color:#1d7a36;}
+.tile.drg-w .t-main{color:#1763c7;}
+.tile.flower{background:linear-gradient(#fff7df,#f4e3a8);border-color:#d6b94e;}
+.tile.flower .t-main{color:#b8860b;}
+.tile.back{background:linear-gradient(135deg,#1e7d54,#0d5c3a);border:1px solid #0a4e33;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.12),0 2px 3px rgba(0,0,0,.3);}
+.tile.back::after{content:"🀄";font-size:calc(var(--tile)*.5);color:rgba(255,255,255,.25);}
+.tile.clickable{cursor:pointer;transition:transform .08s;}
+.tile.clickable:hover{transform:translateY(-8px);}
+.tile.clickable:active{transform:translateY(-4px);}
+.tile.hl{box-shadow:0 0 0 3px var(--hl),0 0 16px var(--hl);border-color:var(--gold);transform:translateY(-6px);}
+.tile.justdrawn{margin-left:calc(var(--tile-lg)*.34);}
+.tile.dim{opacity:.55;}
+.tile.small{width:calc(var(--tile)*.78);height:calc(var(--tile)*1.05);}
+.tile.small .t-main{font-size:calc(var(--tile)*.48);}
+.tile.small .t-sub{font-size:calc(var(--tile)*.27);}
+.flowers-mini{display:flex;gap:2px;flex-wrap:wrap;}
+#hand-wrap{display:flex;flex-direction:column;align-items:center;gap:.4vmin;width:100%;}
+.hand{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:.4vmin;
+  background:rgba(0,0,0,.16);border-radius:14px;max-width:100%;}
+#statusline{font-size:clamp(14px,2.4vmin,24px);font-weight:800;min-height:1.2em;text-align:center;}
+#statusline .ting{color:var(--hl);}
+#wallinfo{display:flex;flex-direction:column;align-items:center;gap:.3vmin;}
+#wallnum{font-size:clamp(26px,7vmin,64px);font-weight:900;color:var(--gold);line-height:1;}
+#walllabel{font-size:clamp(11px,1.8vmin,16px);color:#d9f0e0;}
+.round-pill{background:#0e3527;border:2px solid #2f6b4f;border-radius:20px;
+  padding:.4vmin 1.6vmin;font-weight:800;font-size:clamp(13px,2.2vmin,22px);}
+#actionbar{flex:0 0 auto;display:flex;gap:1.2vmin;justify-content:center;align-items:center;
+  flex-wrap:wrap;padding:.8vmin;min-height:0;background:var(--ui);}
+#actionbar:empty{display:none;}
+.abtn{font-family:inherit;font-weight:800;font-size:clamp(18px,3.4vmin,32px);
+  border:none;border-radius:14px;padding:1vmin 3vmin;cursor:pointer;color:#fff;
+  box-shadow:0 3px 0 rgba(0,0,0,.3);min-width:3.4em;}
+.abtn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.3);}
+.abtn.win{background:#d4af37;color:#3a2c00;} .abtn.pung{background:#2e7d46;}
+.abtn.chow{background:#1763c7;} .abtn.kong{background:#7a4fc0;}
+.abtn.pass{background:#6b6b6b;} .abtn.hint{background:#c77f17;}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;
+  align-items:center;justify-content:center;z-index:50;padding:3vmin;}
+#overlay.show{display:flex;}
+.card{background:#fbf8ef;color:#1d1d1d;border-radius:20px;max-width:min(680px,94vw);
+  max-height:90dvh;overflow:auto;padding:clamp(18px,3.4vmin,34px);box-shadow:0 12px 40px rgba(0,0,0,.5);}
+.card h1{margin:.1em 0 .3em;font-size:clamp(22px,4.4vmin,38px);color:#0c5a3a;text-align:center;}
+.card h2{font-size:clamp(17px,3vmin,24px);margin:.7em 0 .2em;color:#0c5a3a;}
+.card p,.card li{font-size:clamp(15px,2.5vmin,20px);line-height:1.55;}
+.bigbtn{display:block;width:100%;font-family:inherit;font-weight:800;
+  font-size:clamp(18px,3.4vmin,28px);background:#0c5a3a;color:#fff;border:none;
+  border-radius:14px;padding:1.1vmin;margin-top:1.2vmin;cursor:pointer;}
+.bigbtn.alt{background:#1763c7;}
+.tai-table{width:100%;border-collapse:collapse;margin:.6em 0;}
+.tai-table td{padding:.3em .5em;font-size:clamp(15px,2.5vmin,20px);border-bottom:1px solid #e3dcc4;}
+.tai-table td.v{text-align:right;font-weight:800;color:#0c5a3a;}
+.scoregrid{display:grid;grid-template-columns:1fr auto;gap:.2em .8em;margin:.5em 0;}
+.scoregrid .pos{font-weight:700;} .scoregrid .pts{font-weight:800;text-align:right;}
+.persona-pick{display:flex;flex-direction:column;gap:.5em;margin:.5em 0;}
+.persona{display:flex;gap:.7em;align-items:flex-start;background:#f1ecdb;border-radius:12px;padding:.6em;}
+.persona .av{font-size:2em;} .persona b{color:#0c5a3a;}
+.hidden{display:none!important;}
+@media (orientation:portrait){
+  #table{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,1fr);}
+  :root{--tile:clamp(28px,4.6vmin,52px);}
+}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span class="title">🀄 十六張麻將</span>
+  <div class="diffgroup" id="diffgroup">
+    <button class="tbtn diff" data-diff="easy">輕鬆</button>
+    <button class="tbtn diff" data-diff="normal">普通</button>
+    <button class="tbtn diff" data-diff="hard">高手</button>
+  </div>
+  <button class="tbtn" id="btn-assist">提示</button>
+  <button class="tbtn" id="btn-sound">音效</button>
+  <button class="tbtn" id="btn-voice">語音</button>
+  <button class="tbtn" id="btn-help">說明</button>
+  <button class="tbtn" id="btn-new">新局</button>
+</div>
+<div id="table">
+  <div class="seat" id="seat2"></div>
+  <div class="seat" id="seat3"></div>
+  <div id="center">
+    <div class="round-pill" id="round-info">東風圈</div>
+    <div id="wallinfo"><div id="wallnum">--</div><div id="walllabel">剩餘牌數</div></div>
+    <div id="centermsg"></div>
+  </div>
+  <div class="seat" id="seat1"></div>
+  <div class="seat" id="seat0"></div>
+</div>
+<div id="statusline"></div>
+<div id="actionbar"></div>
+<div id="overlay"></div>
+<script>
+/* =====================================================================
+   台灣十六張麻將 — 規則引擎 (Taiwan 16-tile Mahjong engine)
+   Pure logic, no DOM. //===ENGINE_START===
+   ===================================================================== */
+(function (root) {
+'use strict';
+var WINDS = ['we', 'ws', 'ww', 'wn'];
+var DRAGONS = ['dr', 'dg', 'dw'];
+var NAME = {
+  m: '萬', p: '筒', s: '條',
+  we: '東', ws: '南', ww: '西', wn: '北',
+  dr: '中', dg: '發', dw: '白',
+  fl1: '梅', fl2: '蘭', fl3: '菊', fl4: '竹',
+  fl5: '春', fl6: '夏', fl7: '秋', fl8: '冬'
+};
+var CN_NUM = ['一','二','三','四','五','六','七','八','九'];
+function isFlower(k){ return k.charAt(0) === 'f'; }
+function isHonor(k){ return k.charAt(0) === 'w' || k.charAt(0) === 'd'; }
+function isNumber(k){ return k.charAt(0)==='m'||k.charAt(0)==='p'||k.charAt(0)==='s'; }
+function tileLabel(k){ if(isNumber(k)) return CN_NUM[(+k.charAt(1))-1]+NAME[k.charAt(0)]; return NAME[k]||k; }
+function kindToIndex(k){
+  var c=k.charAt(0);
+  if(c==='m') return (+k.charAt(1))-1;
+  if(c==='p') return 9+(+k.charAt(1))-1;
+  if(c==='s') return 18+(+k.charAt(1))-1;
+  return {we:27,ws:28,ww:29,wn:30,dr:31,dg:32,dw:33}[k];
+}
+function indexToKind(i){
+  if(i<9) return 'm'+(i+1);
+  if(i<18) return 'p'+(i-9+1);
+  if(i<27) return 's'+(i-18+1);
+  return ['we','ws','ww','wn','dr','dg','dw'][i-27];
+}
+function buildWall(){
+  var tiles=[],id=0,suits=['m','p','s'],r,c;
+  for(var si=0;si<suits.length;si++) for(r=1;r<=9;r++) for(c=0;c<4;c++) tiles.push({id:id++,k:suits[si]+r});
+  var hon=WINDS.concat(DRAGONS);
+  for(var h=0;h<hon.length;h++) for(c=0;c<4;c++) tiles.push({id:id++,k:hon[h]});
+  for(var f=1;f<=8;f++) tiles.push({id:id++,k:'fl'+f});
+  return tiles;
+}
+function shuffle(arr,rng){
+  rng=rng||Math.random;
+  for(var i=arr.length-1;i>0;i--){ var j=Math.floor(rng()*(i+1)); var t=arr[i]; arr[i]=arr[j]; arr[j]=t; }
+  return arr;
+}
+function countsFromKinds(kinds){
+  var a=new Array(34); for(var i=0;i<34;i++) a[i]=0;
+  for(var j=0;j<kinds.length;j++){ if(!isFlower(kinds[j])) a[kindToIndex(kinds[j])]++; }
+  return a;
+}
+function canDecompose(a){
+  var i=0; while(i<34&&a[i]===0) i++;
+  if(i===34) return true;
+  if(i>=27){ if(a[i]>=3){a[i]-=3;var r=canDecompose(a);a[i]+=3;return r;} return false; }
+  var pos=i%9,ok;
+  if(a[i]>=3){a[i]-=3;ok=canDecompose(a);a[i]+=3;if(ok)return true;}
+  if(pos<=6&&a[i+1]>0&&a[i+2]>0){a[i]--;a[i+1]--;a[i+2]--;ok=canDecompose(a);a[i]++;a[i+1]++;a[i+2]++;if(ok)return true;}
+  return false;
+}
+function canWin(concealedKinds,setsNeeded){
+  if(concealedKinds.length!==setsNeeded*3+2) return false;
+  var base=countsFromKinds(concealedKinds);
+  for(var i=0;i<34;i++){ if(base[i]>=2){ base[i]-=2; if(canDecompose(base)){base[i]+=2;return true;} base[i]+=2; } }
+  return false;
+}
+function decomposeWin(concealedKinds,setsNeeded){
+  if(concealedKinds.length!==setsNeeded*3+2) return null;
+  var base=countsFromKinds(concealedKinds);
+  function take(a,sets){
+    var i=0; while(i<34&&a[i]===0) i++;
+    if(i===34) return sets.slice();
+    if(i>=27){ if(a[i]>=3){a[i]-=3;sets.push({type:'pung',idx:i});var r=take(a,sets);sets.pop();a[i]+=3;return r;} return null; }
+    var pos=i%9,r;
+    if(a[i]>=3){a[i]-=3;sets.push({type:'pung',idx:i});r=take(a,sets);sets.pop();a[i]+=3;if(r)return r;}
+    if(pos<=6&&a[i+1]>0&&a[i+2]>0){a[i]--;a[i+1]--;a[i+2]--;sets.push({type:'chow',idx:i});r=take(a,sets);sets.pop();a[i]++;a[i+1]++;a[i+2]++;if(r)return r;}
+    return null;
+  }
+  for(var p=0;p<34;p++){ if(base[p]>=2){ base[p]-=2; var sets=take(base,[]); base[p]+=2; if(sets) return {pair:p,sets:sets}; } }
+  return null;
+}
+var _shCache={};
+function shanten(concealedKinds,setsNeeded){
+  var S=setsNeeded;
+  var a=countsFromKinds(concealedKinds);
+  var key=S+':'+a.join(',');
+  if(_shCache[key]!==undefined) return _shCache[key];
+  var best=99;
+  function evalLeaf(m,sp,pc){
+    var hasPair=pc>=1?1:0;
+    var partials=sp+(pc-hasPair);
+    var mm=m; if(mm>S) mm=S;
+    var cap=S-mm; if(partials>cap) partials=cap;
+    var sh=2*(S-mm)-partials-hasPair;
+    if(sh<best) best=sh;
+  }
+  function dfs(i,m,sp,pc){
+    while(i<34&&a[i]===0) i++;
+    if(i===34){ evalLeaf(m,sp,pc); return; }
+    if(best<=-1) return;
+    if(a[i]>=3){a[i]-=3;dfs(i,m+1,sp,pc);a[i]+=3;}
+    if(i<27){ var pos=i%9; if(pos<=6&&a[i+1]>0&&a[i+2]>0){a[i]--;a[i+1]--;a[i+2]--;dfs(i,m+1,sp,pc);a[i]++;a[i+1]++;a[i+2]++;} }
+    if(a[i]>=2){a[i]-=2;dfs(i,m,sp,pc+1);a[i]+=2;}
+    if(i<27){ var p2=i%9;
+      if(p2<=7&&a[i+1]>0){a[i]--;a[i+1]--;dfs(i,m,sp+1,pc);a[i]++;a[i+1]++;}
+      if(p2<=6&&a[i+2]>0){a[i]--;a[i+2]--;dfs(i,m,sp+1,pc);a[i]++;a[i+2]++;}
+    }
+    a[i]--;dfs(i,m,sp,pc);a[i]++;
+  }
+  dfs(0,0,0,0);
+  _shCache[key]=best;
+  return best;
+}
+function scoreWin(info){
+  var tai=[];
+  function add(n,v){ tai.push({name:n,tai:v}); }
+  var dec=decomposeWin(info.concealed,5-info.melds.length);
+  var allMelds=[];
+  for(var mi=0;mi<info.melds.length;mi++){ var md=info.melds[mi]; allMelds.push({type:md.type,kindIdx:kindToIndex(md.kind),isPung:md.type!=='chow'}); }
+  var pairIdx=null;
+  if(dec){ pairIdx=dec.pair; for(var di=0;di<dec.sets.length;di++) allMelds.push({type:dec.sets[di].type,kindIdx:dec.sets[di].idx,isPung:dec.sets[di].type==='pung'}); }
+  var allKinds=info.concealed.slice();
+  for(var k2=0;k2<info.melds.length;k2++){
+    var rep=info.melds[k2].kind;
+    if(info.melds[k2].type==='chow'){ var b=kindToIndex(rep); allKinds.push(indexToKind(b),indexToKind(b+1),indexToKind(b+2)); }
+    else { for(var cc=0;cc<3;cc++) allKinds.push(rep); }
+  }
+  if(info.isDealer){ add('莊家',1); if(info.dealerStreak&&info.dealerStreak>0) add('連'+info.dealerStreak+'莊',2*info.dealerStreak); }
+  var menqing=info.melds.every(function(m){return m.type==='akong';});
+  if(info.selfDraw) add('自摸',1);
+  if(menqing){ add('門清',1); if(info.selfDraw) add('不求人',1); }
+  var suitsUsed={}; var hasHonor=false;
+  for(var a2=0;a2<allKinds.length;a2++){ var kk=allKinds[a2]; if(isHonor(kk)) hasHonor=true; else if(isNumber(kk)) suitsUsed[kk.charAt(0)]=true; }
+  var nSuits=Object.keys(suitsUsed).length;
+  if(nSuits===0&&hasHonor) add('字一色',16);
+  else if(nSuits===1&&!hasHonor) add('清一色',8);
+  else if(nSuits===1&&hasHonor) add('混一色',4);
+  var allPung=allMelds.length>0&&allMelds.every(function(m){return m.isPung||m.type==='kong'||m.type==='akong';});
+  if(allPung&&dec) add('碰碰胡',4);
+  function pungOf(idx){ return allMelds.some(function(m){return m.isPung&&m.kindIdx===idx;}); }
+  var drI=kindToIndex('dr'),dgI=kindToIndex('dg'),dwI=kindToIndex('dw');
+  var dragP=[drI,dgI,dwI].filter(pungOf).length;
+  var dragPair=[drI,dgI,dwI].indexOf(pairIdx)>=0;
+  if(dragP===3) add('大三元',8);
+  else if(dragP===2&&dragPair) add('小三元',4);
+  else { if(pungOf(drI)) add('紅中',1); if(pungOf(dgI)) add('青發',1); if(pungOf(dwI)) add('白板',1); }
+  var windIdx=WINDS.map(kindToIndex);
+  var windP=windIdx.filter(pungOf).length;
+  var windPair=windIdx.indexOf(pairIdx)>=0;
+  if(windP===4) add('大四喜',16);
+  else if(windP===3&&windPair) add('小四喜',8);
+  else { if(pungOf(kindToIndex(info.seatWind))) add('門風',1); if(pungOf(kindToIndex(info.roundWind))) add('圈風',1); }
+  var allChow=dec&&allMelds.length>0&&allMelds.every(function(m){return m.type==='chow';});
+  if(allChow&&pairIdx!==null&&pairIdx<27) add('平胡',2);
+  if(dec){
+    var concPungs=dec.sets.filter(function(s){return s.type==='pung';}).length+info.melds.filter(function(m){return m.type==='akong';}).length;
+    if(concPungs>=5) add('五暗刻',8); else if(concPungs===4) add('四暗刻',5); else if(concPungs===3) add('三暗刻',2);
+  }
+  var kongs=info.melds.filter(function(m){return m.type==='kong'||m.type==='akong';}).length;
+  if(kongs===1) add('槓',1); else if(kongs>=2) add('多槓('+kongs+')',2*kongs);
+  var seatNo=WINDS.indexOf(info.seatWind);
+  var ownF=0,totalF=(info.flowers||[]).length;
+  (info.flowers||[]).forEach(function(f){ var n=(+f.slice(2)); if(((n-1)%4)===seatNo) ownF++; });
+  if(ownF>0) add('花台×'+ownF,ownF);
+  if(totalF===0) add('無花',1);
+  if(totalF===8) add('八仙過海',8);
+  if(info.byKong) add('槓上開花',1);
+  if(info.lastTile) add(info.selfDraw?'海底撈月':'河底撈魚',1);
+  if(info.robKong) add('搶槓',1);
+  if(info.heavenly) add('天胡',16);
+  if(info.earthly) add('地胡',8);
+  var total=0; for(var t=0;t<tai.length;t++) total+=tai[t].tai;
+  return {tai:tai,total:total};
+}
+function aiEvaluateDiscards(concealed,setsNeeded,opts){
+  opts=opts||{};
+  var danger=opts.danger||{},safetyWeight=opts.safetyWeight||0,seen=opts.seen||{};
+  var uniq={}; for(var i=0;i<concealed.length;i++) uniq[concealed[i]]=true;
+  var cands=Object.keys(uniq),results=[],minSh=99,c;
+  // pass 1: shanten for each discard
+  for(c=0;c<cands.length;c++){
+    var k=cands[c]; var rest=concealed.slice(); rest.splice(rest.indexOf(k),1);
+    var sh=shanten(rest,setsNeeded);
+    if(sh<minSh) minSh=sh;
+    results.push({kind:k,rest:rest,shanten:sh,ukeire:0,danger:danger[kindToIndex(k)]||0});
+  }
+  // pass 2: ukeire only for the best-shanten discards (the realistic choices)
+  for(c=0;c<results.length;c++){
+    var r=results[c];
+    if(opts.computeUkeire && r.shanten<=minSh){
+      var accept=0;
+      for(var t=0;t<34;t++){ var kt=indexToKind(t); var trial=r.rest.concat([kt]);
+        if(shanten(trial,setsNeeded)<r.shanten){ var remain=4-(seen[t]||0); if(remain>0) accept+=remain; } }
+      r.ukeire=accept;
+    }
+    r.score=r.shanten*100 - r.ukeire + r.danger*100*safetyWeight;
+    delete r.rest;
+  }
+  results.sort(function(x,y){return x.score-y.score;});
+  return results;
+}
+var ENGINE={ WINDS:WINDS,DRAGONS:DRAGONS,NAME:NAME,CN_NUM:CN_NUM,
+  isFlower:isFlower,isHonor:isHonor,isNumber:isNumber,tileLabel:tileLabel,
+  kindToIndex:kindToIndex,indexToKind:indexToKind,buildWall:buildWall,shuffle:shuffle,
+  countsFromKinds:countsFromKinds,canWin:canWin,decomposeWin:decomposeWin,shanten:shanten,
+  scoreWin:scoreWin,aiEvaluateDiscards:aiEvaluateDiscards };
+if(typeof module!=='undefined'&&module.exports) module.exports=ENGINE;
+root.MJ=ENGINE;
+})(typeof window!=='undefined'?window:this);
+//===ENGINE_END===
+</script>
+<script>
+/* =====================================================================
+   台灣十六張麻將 — 對局流程 + AI (Game controller & AI)
+   Depends on MJ engine. UI-agnostic via hooks.  //===GAME_START===
+   ===================================================================== */
+(function (root) {
+'use strict';
+var MJ = (typeof require !== 'undefined') ? require('./engine.js') : root.MJ;
+
+/* ----- AI personality / difficulty presets ----- */
+var PERSONALITIES = {
+  steady:  { id:'steady',  name:'穩健阿姨', avatar:'👵', color:'#c98aa6',
+             blurb:'保守、會顧牌，看到別人聽牌就收手。',
+             safety:+0.35, claimBias:-0.25, flushLove:0.0 },
+  charge:  { id:'charge',  name:'衝鋒大哥', avatar:'🧔', color:'#d98a4a',
+             blurb:'愛拼大牌（清一色、碰碰胡），出牌大膽。',
+             safety:-0.30, claimBias:+0.30, flushLove:0.6 },
+  jolly:   { id:'jolly',   name:'歡樂伯',   avatar:'👴', color:'#5aa9a0',
+             blurb:'愛吃碰、湊熱鬧，打法比較隨興。',
+             safety:-0.10, claimBias:+0.45, flushLove:0.2 }
+};
+// difficulty -> base behaviour
+var DIFFICULTY = {
+  easy:   { ukeire:false, safety:0.0,  defend:false, claimBase:0.45, noise:0.30, label:'輕鬆' },
+  normal: { ukeire:true,  safety:0.30, defend:true,  claimBase:0.55, noise:0.12, label:'普通' },
+  hard:   { ukeire:true,  safety:0.75, defend:true,  claimBase:0.60, noise:0.02, label:'高手' }
+};
+
+function makeConfig(difficulty, personality) {
+  var d = DIFFICULTY[difficulty] || DIFFICULTY.normal;
+  var p = PERSONALITIES[personality];
+  return {
+    difficulty: difficulty, personality: personality, persona: p,
+    ukeire: d.ukeire,
+    safetyWeight: Math.max(0, d.safety + p.safety),
+    defend: d.defend,
+    claimChance: Math.min(0.95, Math.max(0.05, d.claimBase + p.claimBias)),
+    noise: d.noise,
+    flushLove: p.flushLove
+  };
+}
+
+/* ----- Game ----- */
+function Game(opts) {
+  opts = opts || {};
+  this.schedule = opts.schedule || function (fn, ms) { return setTimeout(fn, ms); };
+  this.emit = opts.emit || function () {};
+  this.askHuman = opts.askHuman || function () {};
+  this.rng = opts.rng || Math.random;
+  this.humanSeat = 0;
+  this.autoHuman = !!opts.autoHuman; // headless: AI plays human seat too
+  this.difficulty = opts.difficulty || 'normal';
+  this.players = [];
+  this.scores = [0,0,0,0];
+  this.dealer = 0;
+  this.dealerStreak = 0;
+  this.roundWind = 'we';
+  this.handCount = 0;
+  this.aiSeatPersonas = opts.personas || ['steady','charge','jolly']; // for seats 1,2,3
+}
+
+Game.prototype.setDifficulty = function (d) {
+  this.difficulty = d;
+  for (var s = 1; s <= 3; s++) {
+    if (this.players[s]) this.players[s].config = makeConfig(d, this.players[s].config.personality);
+  }
+};
+
+Game.prototype.newMatch = function () {
+  this.scores = [0,0,0,0];
+  this.dealer = 0; this.dealerStreak = 0; this.roundWind = 'we'; this.handCount = 0;
+  this.startHand();
+};
+
+Game.prototype.makePlayers = function () {
+  var names = ['你', PERSONALITIES.steady.name, PERSONALITIES.charge.name, PERSONALITIES.jolly.name];
+  this.players = [];
+  for (var s = 0; s < 4; s++) {
+    var isHuman = (s === this.humanSeat) && !this.autoHuman;
+    var cfg;
+    if (s === 0) cfg = makeConfig(this.difficulty, this.aiSeatPersonas[0]); // human seat: a config exists for hints, persona unused
+    else cfg = makeConfig(this.difficulty, this.aiSeatPersonas[s - 1]);
+    this.players.push({
+      seat: s, isHuman: (s === this.humanSeat) && !this.autoHuman,
+      name: (s === 0 ? '你' : cfg.persona.name),
+      hand: [], melds: [], flowers: [], discards: [],
+      config: cfg, seatWind: 'we', tenpai: false
+    });
+  }
+};
+
+Game.prototype.startHand = function () {
+  if (!this.players.length) this.makePlayers();
+  this.handCount++;
+  // assign seat winds (dealer = 東)
+  for (var s = 0; s < 4; s++) {
+    var w = MJ.WINDS[(s - this.dealer + 4) % 4];
+    this.players[s].seatWind = w;
+    this.players[s].hand = []; this.players[s].melds = [];
+    this.players[s].flowers = []; this.players[s].discards = [];
+    this.players[s].tenpai = false;
+  }
+  // wall
+  this.wall = MJ.shuffle(MJ.buildWall(), this.rng);
+  this.wp = 0;                       // front draw pointer
+  this.wt = this.wall.length - 1;    // tail (replacement) pointer
+  this.lastDiscard = null;
+  this.firstGoArounds = 0;           // for 天/地胡 detection
+  this.turnIndex = 0;
+  this.gameOver = false;
+  // deal 16 each
+  for (var r = 0; r < 16; r++)
+    for (var p = 0; p < 4; p++) this.players[p].hand.push(this.wall[this.wp++]);
+  // 補花 in seat order from dealer
+  for (var i = 0; i < 4; i++) {
+    var seat = (this.dealer + i) % 4;
+    this.replaceFlowers(seat, false);
+  }
+  for (var q = 0; q < 4; q++) this.sortHand(this.players[q]);
+  this.emit({ type: 'handStart', dealer: this.dealer, roundWind: this.roundWind,
+              dealerStreak: this.dealerStreak, handCount: this.handCount });
+  this.emit({ type: 'render' });
+  // dealer begins
+  this.firstTurn = true;
+  var self = this;
+  this.schedule(function () { self.beginTurn(self.dealer); }, 400);
+};
+
+Game.prototype.sortHand = function (p) {
+  p.hand.sort(function (a, b) {
+    var fa = MJ.isFlower(a.k), fb = MJ.isFlower(b.k);
+    if (fa !== fb) return fa ? 1 : -1;
+    if (fa && fb) return a.k.localeCompare(b.k);
+    return MJ.kindToIndex(a.k) - MJ.kindToIndex(b.k);
+  });
+};
+
+Game.prototype.drawFront = function () {
+  if (this.wp > this.wt) return null;
+  return this.wall[this.wp++];
+};
+Game.prototype.drawTail = function () {
+  if (this.wp > this.wt) return null;
+  return this.wall[this.wt--];
+};
+Game.prototype.wallRemaining = function () { return this.wt - this.wp + 1; };
+
+// replace flowers in a hand; fromTail true => replacements from tail
+Game.prototype.replaceFlowers = function (seat, announce) {
+  var p = this.players[seat], moved = false;
+  for (;;) {
+    var idx = -1;
+    for (var i = 0; i < p.hand.length; i++) if (MJ.isFlower(p.hand[i].k)) { idx = i; break; }
+    if (idx < 0) break;
+    var f = p.hand.splice(idx, 1)[0];
+    p.flowers.push(f);
+    moved = true;
+    var rep = this.drawTail();
+    if (!rep) break;
+    p.hand.push(rep);
+    if (announce) this.emit({ type: 'flower', seat: seat, tile: f.k });
+  }
+  if (moved) this.sortHand(p);
+  return moved;
+};
+
+Game.prototype.setsNeeded = function (p) { return 5 - p.melds.length; };
+Game.prototype.handKinds = function (p) {
+  return p.hand.filter(function (t) { return !MJ.isFlower(t.k); }).map(function (t) { return t.k; });
+};
+Game.prototype.canWinWith = function (p, extraKind) {
+  var kinds = this.handKinds(p);
+  if (extraKind) kinds = kinds.concat([extraKind]);
+  return MJ.canWin(kinds, this.setsNeeded(p));
+};
+
+/* ---- turn ---- */
+Game.prototype.beginTurn = function (seat) {
+  if (this.gameOver) return;
+  this.turn = seat;
+  if (this.wallRemaining() <= 0) { return this.endDraw(); }
+  var p = this.players[seat];
+  var tile = this.drawFront();
+  if (!tile) { return this.endDraw(); }
+  p.hand.push(tile);
+  p._drawn = tile;
+  p._byKong = false;
+  // flower?
+  if (MJ.isFlower(tile.k)) {
+    p.hand.pop(); p.flowers.push(tile);
+    this.emit({ type: 'flower', seat: seat, tile: tile.k });
+    var rep;
+    do { rep = this.drawTail(); if (!rep) return this.endDraw(); p.hand.push(rep); p._drawn = rep; }
+    while (MJ.isFlower(rep.k) ? (p.hand.pop(), p.flowers.push(rep), true) : false);
+    p._byKong = true; // drew from tail => 槓上/花上 treat as replacement
+  }
+  this.sortHand(p);
+  this.emit({ type: 'draw', seat: seat, wall: this.wallRemaining() });
+  this.emit({ type: 'render' });
+  // act
+  if (p.isHuman) this.humanTurn(p);
+  else { var self = this; this.schedule(function () { self.aiTurn(p); }, 650); }
+};
+
+/* ---- human turn ---- */
+Game.prototype.humanTurn = function (p) {
+  var opts = { canWin: this.canWinWith(p, null), kongs: this.selfKongOptions(p) };
+  // 天胡 / 地胡 on very first uninterrupted draw
+  if (opts.canWin && this.firstTurn && this.turn === this.dealer && this.dealerJustDealt())
+    opts.heavenly = true;
+  this.firstTurn = false;
+  this.askHuman({ phase: 'turn', options: opts, player: p });
+};
+Game.prototype.dealerJustDealt = function () { return this.players[this.dealer].discards.length === 0; };
+
+// human must discard after calling 吃/碰 (no draw, no self-win)
+Game.prototype.humanTurnDiscardOnly = function (p) {
+  this.askHuman({ phase: 'discardOnly', options: { canWin: false, kongs: this.selfKongOptions(p) }, player: p });
+};
+
+// concealed self-kong (暗槓) and added-kong (補槓) options
+Game.prototype.selfKongOptions = function (p) {
+  var res = [], counts = {}, i;
+  var kinds = this.handKinds(p);
+  for (i = 0; i < kinds.length; i++) counts[kinds[i]] = (counts[kinds[i]] || 0) + 1;
+  for (var k in counts) if (counts[k] === 4) res.push({ type: 'akong', kind: k });
+  // 補槓: have a pung meld and hold 4th
+  for (i = 0; i < p.melds.length; i++) {
+    var m = p.melds[i];
+    if (m.type === 'pung' && counts[m.kind] >= 1) res.push({ type: 'kong', kind: m.kind, added: true });
+  }
+  return res;
+};
+
+/* ---- AI turn ---- */
+Game.prototype.aiTurn = function (p) {
+  if (this.gameOver) return;
+  this.firstTurn = false;
+  // self win?
+  if (this.canWinWith(p, null)) { return this.declareWin(p.seat, null, true); }
+  // consider 暗槓 (only if not breaking, simple)
+  var kongs = this.selfKongOptions(p);
+  if (kongs.length && this.rng() < 0.8) {
+    var kg = kongs[0];
+    var before = MJ.shanten(this.handKinds(p), this.setsNeeded(p));
+    // try
+    this.applySelfKong(p, kg);
+    var after = MJ.shanten(this.handKinds(p), this.setsNeeded(p));
+    if (after > before) { /* worsened; can't easily undo — accept anyway rare */ }
+    // draw replacement happened in applySelfKong; check win
+    if (this.canWinWith(p, null)) return this.declareWin(p.seat, null, true, true);
+    var self0 = this; this.emit({ type:'render' });
+    return this.schedule(function(){ self0.aiTurn(p); }, 500);
+  }
+  // discard decision
+  var danger = this.dangerMap(p);
+  var ev = MJ.aiEvaluateDiscards(this.handKinds(p), this.setsNeeded(p), {
+    computeUkeire: p.config.ukeire, danger: danger, safetyWeight: p.config.safetyWeight,
+    seen: this.seenMap(p)
+  });
+  // defensive fold: if someone likely tenpai and we are far, prefer safest
+  var choice = ev[0];
+  if (p.config.defend && this.someoneThreatening(p.seat)) {
+    var myShan = MJ.shanten(this.handKinds(p), this.setsNeeded(p));
+    if (myShan >= 2) {
+      ev.sort(function (a, b) { return (a.danger - b.danger) || (a.shanten - b.shanten); });
+      choice = ev[0];
+    }
+  }
+  // noise
+  if (this.rng() < p.config.noise && ev.length > 1) choice = ev[Math.min(ev.length-1, 1)];
+  // find a tile id of that kind, prefer the drawn or a lone copy
+  var tile = this.findDiscardTile(p, choice.kind);
+  var self = this;
+  this.schedule(function () { self.doDiscard(p.seat, tile.id); }, 300);
+};
+
+Game.prototype.findDiscardTile = function (p, kind) {
+  for (var i = 0; i < p.hand.length; i++) if (p.hand[i].k === kind) return p.hand[i];
+  return p.hand[p.hand.length - 1];
+};
+
+// danger of each kind index for player p (higher = riskier to discard)
+Game.prototype.dangerMap = function (p) {
+  var d = {};
+  if (!p.config.safetyWeight) return d;
+  // genbutsu: tiles already discarded by anyone are safe(ish)
+  var discarded = {};
+  for (var s = 0; s < 4; s++) for (var i = 0; i < this.players[s].discards.length; i++)
+    discarded[MJ.kindToIndex(this.players[s].discards[i].k)] = true;
+  for (var idx = 0; idx < 34; idx++) {
+    var risk = 0.5;
+    if (discarded[idx]) risk = 0.05;
+    else if (idx >= 27) risk = 0.3;       // honors a bit safer
+    d[idx] = risk;
+  }
+  return d;
+};
+Game.prototype.seenMap = function (p) {
+  var seen = {};
+  function bump(k) { if (!MJ.isFlower(k)) seen[MJ.kindToIndex(k)] = (seen[MJ.kindToIndex(k)] || 0) + 1; }
+  for (var i = 0; i < p.hand.length; i++) bump(p.hand[i].k);
+  for (var s = 0; s < 4; s++) {
+    for (var d = 0; d < this.players[s].discards.length; d++) bump(this.players[s].discards[d].k);
+    for (var m = 0; m < this.players[s].melds.length; m++) {
+      var md = this.players[s].melds[m];
+      if (md.type === 'chow') { var b = MJ.kindToIndex(md.kind); seen[b]=(seen[b]||0)+1; seen[b+1]=(seen[b+1]||0)+1; seen[b+2]=(seen[b+2]||0)+1; }
+      else { var n = md.type.indexOf('kong') >= 0 ? 4 : 3; seen[MJ.kindToIndex(md.kind)] = (seen[MJ.kindToIndex(md.kind)]||0)+n; }
+    }
+  }
+  return seen;
+};
+Game.prototype.someoneThreatening = function (mySeat) {
+  for (var s = 0; s < 4; s++) {
+    if (s === mySeat) continue;
+    var p = this.players[s];
+    if (p.melds.length >= 2 || p.discards.length >= 8) return true; // crude
+  }
+  return false;
+};
+
+/* ---- discard & claims ---- */
+Game.prototype.doDiscard = function (seat, tileId) {
+  var p = this.players[seat];
+  var idx = -1;
+  for (var i = 0; i < p.hand.length; i++) if (p.hand[i].id === tileId) { idx = i; break; }
+  if (idx < 0) return;
+  var tile = p.hand.splice(idx, 1)[0];
+  p.discards.push(tile);
+  p._drawn = null;
+  p.tenpai = (MJ.shanten(this.handKinds(p), this.setsNeeded(p)) === 0);
+  this.lastDiscard = { seat: seat, tile: tile };
+  this.emit({ type: 'discard', seat: seat, tile: tile.k });
+  this.emit({ type: 'render' });
+  var self = this;
+  this.schedule(function () { self.afterDiscard(seat, tile.k); }, 250);
+};
+
+Game.prototype.claimOptionsFor = function (seat, discarder, kind) {
+  var p = this.players[seat], o = { ron:false, pung:false, kong:false, chow:[] };
+  if (MJ.isFlower(kind)) return o;
+  if (this.canWinWith(p, kind)) o.ron = true;
+  var cnt = 0, i;
+  var kinds = this.handKinds(p);
+  for (i = 0; i < kinds.length; i++) if (kinds[i] === kind) cnt++;
+  if (cnt >= 2) o.pung = true;
+  if (cnt >= 3) o.kong = true;
+  // chow only by 下家
+  if ((discarder + 1) % 4 === seat && MJ.isNumber(kind)) {
+    var idx = MJ.kindToIndex(kind), pos = idx % 9, base = idx - pos;
+    function has(rk) { return kinds.indexOf(MJ.indexToKind(rk)) >= 0; }
+    if (pos >= 2 && has(idx-2) && has(idx-1)) o.chow.push([idx-2, idx-1]);
+    if (pos >= 1 && pos <= 7 && has(idx-1) && has(idx+1)) o.chow.push([idx-1, idx+1]);
+    if (pos <= 6 && has(idx+1) && has(idx+2)) o.chow.push([idx+1, idx+2]);
+  }
+  return o;
+};
+
+Game.prototype.afterDiscard = function (discarder, kind) {
+  if (this.gameOver) return;
+  var self = this, intents = {}; // seat -> {action, data}
+  var humanCandidate = null;
+  for (var off = 1; off <= 3; off++) {
+    var seat = (discarder + off) % 4;
+    var p = this.players[seat];
+    var o = this.claimOptionsFor(seat, discarder, kind);
+    if (!o.ron && !o.pung && !o.kong && o.chow.length === 0) continue;
+    if (p.isHuman) { humanCandidate = { seat: seat, options: o }; }
+    else {
+      var decision = this.aiClaimDecision(p, discarder, kind, o);
+      if (decision && decision.action !== 'pass') intents[seat] = decision;
+    }
+  }
+  if (humanCandidate) {
+    // ask human; they will call this.resolveHumanClaim(action,data)
+    this._pendingIntents = intents;
+    this._pendingDiscard = { discarder: discarder, kind: kind };
+    this.askHuman({ phase: 'claim', options: humanCandidate.options, kind: kind, discarder: discarder });
+    return;
+  }
+  this.resolveClaims(intents, discarder, kind);
+};
+
+// human chose a claim (or pass)
+Game.prototype.resolveHumanClaim = function (action, data) {
+  var intents = this._pendingIntents || {};
+  var d = this._pendingDiscard;
+  if (action && action !== 'pass') intents[this.humanSeat] = { action: action, data: data };
+  this._pendingIntents = null; this._pendingDiscard = null;
+  this.resolveClaims(intents, d.discarder, d.kind);
+};
+
+Game.prototype.resolveClaims = function (intents, discarder, kind) {
+  var seats = Object.keys(intents).map(Number);
+  if (!seats.length) { // no claim -> next player draws
+    var self0 = this;
+    return this.schedule(function () { self0.beginTurn((discarder + 1) % 4); }, 150);
+  }
+  // priority: ron > pung/kong > chow ; ron ties by nearest after discarder
+  var ron = seats.filter(function (s) { return intents[s].action === 'ron'; });
+  if (ron.length) {
+    ron.sort(function (a, b) { return ((a - discarder + 4) % 4) - ((b - discarder + 4) % 4); });
+    return this.declareWin(ron[0], kind, false);
+  }
+  var pk = seats.filter(function (s) { return intents[s].action === 'pung' || intents[s].action === 'kong'; });
+  if (pk.length) {
+    pk.sort(function (a, b) { return ((a - discarder + 4) % 4) - ((b - discarder + 4) % 4); });
+    var s = pk[0];
+    return (intents[s].action === 'kong') ? this.doKongFromDiscard(s, discarder, kind)
+                                          : this.doPung(s, discarder, kind);
+  }
+  var chow = seats.filter(function (s) { return intents[s].action === 'chow'; });
+  if (chow.length) return this.doChow(chow[0], discarder, kind, intents[chow[0]].data);
+  this.schedule(function () {}, 0);
+};
+
+Game.prototype.removeFromDiscard = function (discarder) {
+  var dp = this.players[discarder];
+  return dp.discards.pop(); // claimed tile leaves the river
+};
+Game.prototype.takeFromHand = function (p, kind, n) {
+  var taken = [];
+  for (var i = p.hand.length - 1; i >= 0 && taken.length < n; i--) {
+    if (p.hand[i].k === kind) taken.push(p.hand.splice(i, 1)[0]);
+  }
+  return taken;
+};
+
+Game.prototype.doPung = function (seat, discarder, kind) {
+  var p = this.players[seat];
+  var claimed = this.removeFromDiscard(discarder);
+  var two = this.takeFromHand(p, kind, 2);
+  p.melds.push({ type: 'pung', kind: kind, tiles: two.concat([claimed]), from: discarder });
+  this.emit({ type: 'meld', seat: seat, kind: 'pung', tile: kind, voice: '碰' });
+  this.emit({ type: 'render' });
+  this.turn = seat;
+  var self = this;
+  if (p.isHuman) { this.schedule(function () { self.humanTurnDiscardOnly(p); }, 200); }
+  else this.schedule(function () { self.aiTurn(p); }, 500);
+};
+
+Game.prototype.doChow = function (seat, discarder, kind, pairIdx) {
+  var p = this.players[seat];
+  var claimed = this.removeFromDiscard(discarder);
+  var t1 = this.takeFromHand(p, MJ.indexToKind(pairIdx[0]), 1)[0];
+  var t2 = this.takeFromHand(p, MJ.indexToKind(pairIdx[1]), 1)[0];
+  var base = Math.min(pairIdx[0], pairIdx[1], MJ.kindToIndex(kind));
+  p.melds.push({ type: 'chow', kind: MJ.indexToKind(base), tiles: [t1, t2, claimed], from: discarder });
+  this.emit({ type: 'meld', seat: seat, kind: 'chow', tile: kind, voice: '吃' });
+  this.emit({ type: 'render' });
+  this.turn = seat;
+  var self = this;
+  if (p.isHuman) this.schedule(function () { self.humanTurnDiscardOnly(p); }, 200);
+  else this.schedule(function () { self.aiTurn(p); }, 500);
+};
+
+Game.prototype.doKongFromDiscard = function (seat, discarder, kind) {
+  var p = this.players[seat];
+  var claimed = this.removeFromDiscard(discarder);
+  var three = this.takeFromHand(p, kind, 3);
+  p.melds.push({ type: 'kong', kind: kind, tiles: three.concat([claimed]), from: discarder });
+  this.emit({ type: 'meld', seat: seat, kind: 'kong', tile: kind, voice: '槓' });
+  // draw replacement
+  var rep = this.drawTail();
+  if (!rep) return this.endDraw();
+  p.hand.push(rep); p._byKong = true;
+  this.replaceFlowers(seat, true);
+  this.sortHand(p);
+  this.emit({ type: 'render' });
+  this.turn = seat;
+  var self = this;
+  if (this.canWinWith(p, null)) return this.declareWin(seat, null, true, true);
+  if (p.isHuman) this.schedule(function () { self.humanTurn(p); }, 200);
+  else this.schedule(function () { self.aiTurn(p); }, 500);
+};
+
+Game.prototype.applySelfKong = function (p, kg) {
+  if (kg.type === 'akong') {
+    var four = this.takeFromHand(p, kg.kind, 4);
+    p.melds.push({ type: 'akong', kind: kg.kind, tiles: four });
+  } else { // 補槓
+    for (var i = 0; i < p.melds.length; i++) if (p.melds[i].type === 'pung' && p.melds[i].kind === kg.kind) {
+      var t = this.takeFromHand(p, kg.kind, 1);
+      p.melds[i].type = 'kong'; p.melds[i].tiles = p.melds[i].tiles.concat(t); break;
+    }
+  }
+  var rep = this.drawTail();
+  if (rep) { p.hand.push(rep); p._byKong = true; this.replaceFlowers(p.seat, true); }
+  this.sortHand(p);
+  this.emit({ type: 'meld', seat: p.seat, kind: 'kong', tile: kg.kind, voice: '槓' });
+};
+
+/* ---- AI claim decision ---- */
+Game.prototype.aiClaimDecision = function (p, discarder, kind, o) {
+  if (o.ron) return { action: 'ron' };
+  var cur = MJ.shanten(this.handKinds(p), this.setsNeeded(p));
+  var best = { action: 'pass', gain: -99 };
+  var idx = MJ.kindToIndex(kind);
+  var yaku = (MJ.DRAGONS.indexOf(kind) >= 0) || (kind === p.seatWind) || (kind === this.roundWind);
+  var chance = p.config.claimChance + (yaku ? 0.2 : 0) + (p.config.flushLove ? 0.0 : 0);
+  function tryMeld(action, removeKinds, addMeldType, data) {
+    var concealed = this.handKinds(p).slice();
+    for (var r = 0; r < removeKinds.length; r++) concealed.splice(concealed.indexOf(removeKinds[r]), 1);
+    var newSetsNeeded = this.setsNeeded(p) - 1;
+    var ns = MJ.shanten(concealed, newSetsNeeded);
+    var gain = cur - ns; // how many steps closer
+    // chasing flush: bonus if claimed tile matches dominant suit
+    return { action: action, gain: gain, data: data, ns: ns };
+  }
+  var cands = [];
+  if (o.pung) cands.push(tryMeld.call(this, 'pung', [kind, kind], 'pung'));
+  if (o.kong) cands.push(tryMeld.call(this, 'kong', [kind, kind, kind], 'kong'));
+  for (var c = 0; c < o.chow.length; c++) {
+    cands.push(tryMeld.call(this, 'chow', [MJ.indexToKind(o.chow[c][0]), MJ.indexToKind(o.chow[c][1])], 'chow', o.chow[c]));
+  }
+  for (var i = 0; i < cands.length; i++) if (cands[i].gain > best.gain) best = cands[i];
+  if (best.action === 'pass') return null;
+  // decide: claim if improves (gain>0) with claimChance, or equal (gain==0) with reduced chance for yakuhai
+  var roll = this.rng();
+  var threshold;
+  if (best.gain > 0) threshold = chance;
+  else if (best.gain === 0 && yaku) threshold = chance * 0.6;
+  else threshold = chance * 0.15;
+  // cautious AIs avoid breaking concealment for marginal gains
+  if (best.gain <= 0 && p.config.persona && p.config.persona.id === 'steady') threshold *= 0.3;
+  if (roll < threshold) return { action: best.action, data: best.data };
+  return null;
+};
+
+/* ---- endings ---- */
+Game.prototype.declareWin = function (seat, winKind, selfDraw, byKong) {
+  if (this.gameOver) return;
+  this.gameOver = true;
+  var p = this.players[seat];
+  var concealed = this.handKinds(p).slice();
+  if (!selfDraw && winKind) concealed = concealed.concat([winKind]);
+  var info = {
+    melds: p.melds.map(function (m) { return { type: m.type, kind: m.kind }; }),
+    concealed: concealed, winTile: winKind || (p._drawn && p._drawn.k),
+    selfDraw: !!selfDraw, seatWind: p.seatWind, roundWind: this.roundWind,
+    isDealer: seat === this.dealer, dealerStreak: this.dealerStreak,
+    flowers: p.flowers.map(function (t) { return t.k; }),
+    byKong: !!byKong, lastTile: this.wallRemaining() <= 0,
+    robKong: false,
+    heavenly: selfDraw && seat === this.dealer && this.dealerJustDealt() && this.handCount >= 1 && p.discards.length === 0 && this.firstHandFlag,
+    earthly: false
+  };
+  var score = MJ.scoreWin(info);
+  // payments
+  var loser = selfDraw ? null : (this.lastDiscard ? this.lastDiscard.seat : null);
+  var pay = score.total;
+  if (selfDraw) {
+    for (var s = 0; s < 4; s++) if (s !== seat) { this.scores[s] -= pay; this.scores[seat] += pay; }
+  } else if (loser != null) {
+    this.scores[loser] -= pay; this.scores[seat] += pay;
+  }
+  this.emit({ type: 'win', seat: seat, selfDraw: !!selfDraw, score: score, info: info,
+              loser: loser, scores: this.scores.slice(), voice: '胡' });
+  // next dealer
+  this._endHandRotation(seat === this.dealer);
+};
+
+Game.prototype.endDraw = function () {
+  if (this.gameOver) return;
+  this.gameOver = true;
+  this.emit({ type: 'drawGame', scores: this.scores.slice() });
+  this._endHandRotation(true); // 流局 -> 連莊 (dealer keeps)
+};
+
+Game.prototype._endHandRotation = function (dealerKeeps) {
+  if (dealerKeeps) this.dealerStreak++;
+  else { this.dealer = (this.dealer + 1) % 4; this.dealerStreak = 0;
+         if (this.dealer === 0) this.roundWind = MJ.WINDS[(MJ.WINDS.indexOf(this.roundWind) + 1) % 4]; }
+};
+
+Game.prototype.startNextHand = function () { this.firstHandFlag = false; this.startHand(); };
+
+/* ---- human-facing wrappers (called by UI) ---- */
+Game.prototype.humanDiscard = function (tileId) { this.doDiscard(this.humanSeat, tileId); };
+Game.prototype.humanSelfWin = function () { this.declareWin(this.humanSeat, null, true); };
+Game.prototype.humanSelfKong = function (kg) {
+  var p = this.players[this.humanSeat];
+  this.applySelfKong(p, kg);
+  this.emit({ type: 'render' });
+  var self = this;
+  if (this.canWinWith(p, null)) return this.declareWin(this.humanSeat, null, true, true);
+  this.schedule(function () { self.humanTurn(p); }, 150);
+};
+// hint for human: best discard + tenpai/shanten status (assist mode)
+Game.prototype.humanHint = function () {
+  var p = this.players[this.humanSeat];
+  var sh = MJ.shanten(this.handKinds(p), this.setsNeeded(p));
+  var ev = MJ.aiEvaluateDiscards(this.handKinds(p), this.setsNeeded(p), { computeUkeire: true, seen: this.seenMap(p) });
+  return { shanten: sh, suggest: ev.length ? ev[0].kind : null, tenpai: sh <= 0 };
+};
+
+/* expose */
+var API = { Game: Game, PERSONALITIES: PERSONALITIES, DIFFICULTY: DIFFICULTY, makeConfig: makeConfig };
+if (typeof module !== 'undefined' && module.exports) module.exports = API;
+root.MJGame = API;
+})(typeof window !== 'undefined' ? window : this);
+//===GAME_END===
+</script>
+<script>
+/* =====================================================================
+   台灣十六張麻將 — 介面/互動 (UI layer)  //===APP_START===
+   ===================================================================== */
+(function () {
+'use strict';
+var MJ = window.MJ, MJG = window.MJGame;
+var P = MJG.PERSONALITIES;
+var SEAT_EL = ['seat0','seat1','seat2','seat3'];
+var DIR = { 0:'下', 1:'右(下家)', 2:'對(對家)', 3:'左(上家)' };
+
+var settings = loadSettings();
+var G = null;
+var currentAsk = null;
+var hintKind = null;
+var bubbles = {};       // seat -> {text, t}
+var lastDiscardKey = null;
+
+function loadSettings(){
+  var d = { assist:true, sound:true, voice:true, difficulty:'normal' };
+  try{ var s = JSON.parse(localStorage.getItem('mj16_settings')||'{}'); for(var k in s) d[k]=s[k]; }catch(e){}
+  return d;
+}
+function saveSettings(){ try{ localStorage.setItem('mj16_settings', JSON.stringify(settings)); }catch(e){} }
+
+/* ---------------- tiles ---------------- */
+function tileHTML(kind, opts){
+  opts = opts || {};
+  if(opts.faceDown) return '<div class="tile back'+(opts.small?' small':'')+'"></div>';
+  var cls='tile', suit=kind.charAt(0), main='', sub='';
+  if(MJ.isNumber(kind)){ cls+=' suit-'+suit; main=MJ.CN_NUM[(+kind.charAt(1))-1]; sub=MJ.NAME[suit]; }
+  else if(kind==='dr'){ cls+=' drg-r'; main='中'; }
+  else if(kind==='dg'){ cls+=' drg-g'; main='發'; }
+  else if(kind==='dw'){ cls+=' drg-w'; main='白'; }
+  else if(suit==='w'){ cls+=' wind'; main=MJ.NAME[kind]; }
+  else if(MJ.isFlower(kind)){ cls+=' flower'; main=MJ.NAME[kind]; sub=((+kind.slice(2))<=4?'花':'季'); }
+  if(opts.small) cls+=' small';
+  if(opts.hl) cls+=' hl';
+  if(opts.dim) cls+=' dim';
+  if(opts.drawn) cls+=' justdrawn';
+  if(opts.clickable) cls+=' clickable';
+  var data = (opts.id!=null) ? (' data-id="'+opts.id+'"') : '';
+  return '<div class="'+cls+'"'+data+'><span class="t-main">'+main+'</span>'+
+         (sub?'<span class="t-sub">'+sub+'</span>':'')+'</div>';
+}
+function meldHTML(m){
+  var html='<div class="meld">';
+  if(m.type==='chow'){
+    var b=MJ.kindToIndex(m.kind);
+    html+=tileHTML(MJ.indexToKind(b),{small:true})+tileHTML(MJ.indexToKind(b+1),{small:true})+tileHTML(MJ.indexToKind(b+2),{small:true});
+  } else {
+    var n=(m.type==='kong'||m.type==='akong')?4:3;
+    for(var i=0;i<n;i++){
+      var fd = (m.type==='akong' && (i===0||i===3)); // concealed kong: ends face down
+      html+=tileHTML(m.kind,{small:true, faceDown:fd});
+    }
+  }
+  return html+'</div>';
+}
+
+/* ---------------- render ---------------- */
+function el(id){ return document.getElementById(id); }
+
+function render(){
+  if(!G) return;
+  for(var s=0;s<4;s++) renderSeat(s);
+  el('wallnum').textContent = G.wallRemaining();
+  var rw = MJ.NAME[G.roundWind];
+  el('round-info').textContent = rw+'風圈 ・ '+G.players[G.dealer].name+'做莊'+(G.dealerStreak?(' (連'+G.dealerStreak+'莊)'):'');
+  renderStatus();
+}
+
+function renderSeat(s){
+  var p = G.players[s], c = el(SEAT_EL[s]);
+  var isTurn = (G.turn===s && !G.gameOver);
+  var cls = 'seat'+(isTurn?' turn-on':'');
+  c.className = cls;
+  var head = '<div class="nameplate'+(s===0?' me':'')+'">'+
+    '<span class="avatar">'+(s===0?'🧑':p.config.persona.avatar)+'</span>'+
+    '<span class="nm">'+p.name+'</span>'+
+    '<span class="wind-badge">'+MJ.NAME[p.seatWind]+'</span>'+
+    '<span class="score">'+(G.scores[s]>=0?'+':'')+G.scores[s]+'</span>'+
+    (bubbles[s]?('<span class="bubble">'+bubbles[s].text+'</span>'):'')+
+    '</div>';
+  // flowers
+  var fl='';
+  if(p.flowers.length){ fl='<div class="flowers-mini">'; for(var f=0;f<p.flowers.length;f++) fl+=tileHTML(p.flowers[f].k,{small:true}); fl+='</div>'; }
+  // melds
+  var melds='';
+  if(p.melds.length){ melds='<div class="melds">'; for(var m=0;m<p.melds.length;m++) melds+=meldHTML(p.melds[m]); melds+='</div>'; }
+  // discards
+  var disc='<div class="discards">';
+  for(var d=0; d<p.discards.length; d++){
+    var hl = (lastDiscardKey===s+'#'+d);
+    disc+=tileHTML(p.discards[d].k,{small:true, hl:hl});
+  }
+  disc+='</div>';
+
+  if(s===0){
+    c.innerHTML = head + melds + fl +
+      '<div id="hand-wrap"><div class="hand" id="hand"></div></div>' + disc;
+    renderHand();
+  } else {
+    // opponent concealed hand as face-down count
+    var hand='<div class="tilerow">';
+    var cnt = p.hand.length;
+    for(var i=0;i<cnt;i++) hand+=tileHTML('', {faceDown:true, small:true});
+    hand+='</div>';
+    c.innerHTML = head + hand + melds + fl + disc;
+  }
+}
+
+function renderHand(){
+  var p = G.players[0], h = el('hand');
+  if(!h) return;
+  var drawnId = (currentAsk && (currentAsk.phase==='turn') && p._drawn) ? p._drawn.id : null;
+  var clickable = !!(currentAsk && (currentAsk.phase==='turn'||currentAsk.phase==='discardOnly'));
+  var html='', drawnHTML='';
+  for(var i=0;i<p.hand.length;i++){
+    var t=p.hand[i];
+    var o={ id:t.id, clickable:clickable, hl:(clickable && settings.assist && hintKind===t.k) };
+    if(t.id===drawnId){ o.drawn=true; drawnHTML=tileHTML(t.k,o); }
+    else html+=tileHTML(t.k,o);
+  }
+  h.innerHTML = html + drawnHTML;
+}
+
+function renderStatus(){
+  var sl = el('statusline');
+  if(G.gameOver){ sl.innerHTML=''; return; }
+  if(currentAsk && (currentAsk.phase==='turn'||currentAsk.phase==='discardOnly')){
+    if(settings.assist){
+      var hint = G.humanHint();
+      if(hint.tenpai) sl.innerHTML = '<span class="ting">🎉 你聽牌了！再一張就胡</span>';
+      else sl.innerHTML = '還差 '+(hint.shanten)+' 步聽牌　(提示：可打 '+(hint.suggest?MJ.tileLabel(hint.suggest):'')+')';
+    } else {
+      sl.textContent = '輪到你了，請點一張牌打出';
+    }
+  } else if(currentAsk && currentAsk.phase==='claim'){
+    sl.textContent = '別家打出 '+MJ.tileLabel(currentAsk.kind)+'，你要不要叫牌？';
+  } else { sl.textContent=''; }
+}
+
+/* ---------------- events from engine ---------------- */
+function onEvent(e){
+  switch(e.type){
+    case 'render': render(); break;
+    case 'handStart':
+      bubbles={}; currentAsk=null; lastDiscardKey=null; hintKind=null;
+      clearActions(); hideOverlay(); render(); break;
+    case 'draw': sound('draw'); break;
+    case 'discard':
+      lastDiscardKey = e.seat+'#'+(G.players[e.seat].discards.length-1);
+      sound('discard'); render(); break;
+    case 'meld':
+      bubble(e.seat, e.voice||'');
+      if(e.voice) speak(e.voice);
+      sound('meld'); render(); break;
+    case 'flower':
+      // brief flower note for opponents
+      if(e.seat!==0) bubble(e.seat, '花');
+      render(); break;
+    case 'win': onWin(e); break;
+    case 'drawGame': onDrawGame(e); break;
+  }
+}
+
+function bubble(seat, text){
+  if(!text) return;
+  bubbles[seat] = { text:text, t:Date.now() };
+  render();
+  setTimeout(function(){
+    if(bubbles[seat] && Date.now()-bubbles[seat].t>=1400){ delete bubbles[seat]; render(); }
+  }, 1500);
+}
+
+/* ---------------- human prompts ---------------- */
+function onAsk(payload){
+  currentAsk = payload;
+  hintKind = null;
+  if(settings.assist && (payload.phase==='turn'||payload.phase==='discardOnly')){
+    var hint = G.humanHint(); hintKind = hint.suggest;
+  }
+  buildActions(payload);
+  render();
+}
+
+function clearActions(){ el('actionbar').innerHTML=''; }
+
+function buildActions(payload){
+  var bar = el('actionbar'); bar.innerHTML='';
+  function btn(label, cls, fn){
+    var b=document.createElement('button'); b.className='abtn '+cls; b.textContent=label;
+    b.onclick=function(){ fn(); }; bar.appendChild(b); return b;
+  }
+  if(payload.phase==='turn' || payload.phase==='discardOnly'){
+    if(payload.options.canWin) btn('自摸 胡!', 'win', function(){ clearActions(); var a=currentAsk; currentAsk=null; speak('胡'); G.humanSelfWin(); });
+    (payload.options.kongs||[]).forEach(function(kg){
+      btn('槓 '+MJ.tileLabel(kg.kind), 'kong', function(){ clearActions(); currentAsk=null; speak('槓'); G.humanSelfKong(kg); });
+    });
+    // discard happens by clicking a hand tile
+  } else if(payload.phase==='claim'){
+    var o=payload.options;
+    if(o.ron) btn('胡!', 'win', function(){ resolveClaim('ron'); });
+    if(o.pung) btn('碰', 'pung', function(){ resolveClaim('pung'); });
+    if(o.kong) btn('槓', 'kong', function(){ resolveClaim('kong'); });
+    (o.chow||[]).forEach(function(pair){
+      var lbl = '吃 '+MJ.tileLabel(MJ.indexToKind(pair[0]))+MJ.tileLabel(MJ.indexToKind(pair[1]));
+      btn(lbl, 'chow', function(){ resolveClaim('chow', pair); });
+    });
+    btn('過', 'pass', function(){ resolveClaim('pass'); });
+  }
+}
+
+function resolveClaim(action, data){
+  clearActions();
+  var voice = {ron:'胡', pung:'碰', kong:'槓', chow:'吃'}[action];
+  if(voice) speak(voice);
+  currentAsk=null;
+  G.resolveHumanClaim(action, data);
+}
+
+// click a hand tile to discard
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest ? ev.target.closest('.tile.clickable') : null;
+  if(!t) return;
+  if(!currentAsk || !(currentAsk.phase==='turn'||currentAsk.phase==='discardOnly')) return;
+  var id = +t.getAttribute('data-id');
+  if(isNaN(id)) return;
+  clearActions();
+  currentAsk=null;
+  sound('discard');
+  G.humanDiscard(id);
+});
+
+/* ---------------- win / draw overlays ---------------- */
+function onWin(e){
+  var winner = G.players[e.seat];
+  var rows='';
+  e.score.tai.forEach(function(t){ rows+='<tr><td>'+t.name+'</td><td class="v">'+t.tai+' 台</td></tr>'; });
+  if(!e.score.tai.length) rows='<tr><td>無台（雞胡，只拿底）</td><td class="v">0 台</td></tr>';
+  var how = e.selfDraw ? '自摸' : ('胡 '+(e.loser!=null?G.players[e.loser].name:'')+' 打的牌');
+  var sc = scoreboardHTML();
+  var title = (e.seat===0) ? '🎉 你胡牌了！' : (winner.name+' 胡牌');
+  speak('胡'); sound('win');
+  showOverlay(
+    '<h1>'+title+'</h1>'+
+    '<p style="text-align:center;font-size:1.1em;"><b>'+how+'</b>　共 <b style="color:#0c5a3a">'+e.score.total+' 台</b></p>'+
+    '<table class="tai-table">'+rows+'</table>'+
+    sc+
+    '<button class="bigbtn" id="ov-next">下一局 ▶</button>'
+  );
+  el('ov-next').onclick = function(){ hideOverlay(); G.startNextHand(); };
+}
+function onDrawGame(e){
+  sound('win');
+  showOverlay('<h1>流局 🀫</h1><p style="text-align:center">牌摸完了，沒有人胡。莊家連莊，再來一局！</p>'+
+    scoreboardHTML()+'<button class="bigbtn" id="ov-next">下一局 ▶</button>');
+  el('ov-next').onclick = function(){ hideOverlay(); G.startNextHand(); };
+}
+function scoreboardHTML(){
+  var names=['你',P.steady.name,P.charge.name,P.jolly.name];
+  var order=[0,1,2,3].slice().sort(function(a,b){return G.scores[b]-G.scores[a];});
+  var g='<h2>目前總分</h2><div class="scoregrid">';
+  order.forEach(function(s){ g+='<div class="pos">'+G.players[s].name+'</div><div class="pts">'+(G.scores[s]>=0?'+':'')+G.scores[s]+'</div>'; });
+  return g+'</div>';
+}
+
+/* ---------------- overlays generic ---------------- */
+function showOverlay(html){ var o=el('overlay'); o.innerHTML='<div class="card">'+html+'</div>'; o.classList.add('show'); }
+function hideOverlay(){ el('overlay').classList.remove('show'); }
+
+function showStart(){
+  var pHTML='';
+  [P.steady,P.charge,P.jolly].forEach(function(pp){
+    pHTML+='<div class="persona"><span class="av">'+pp.avatar+'</span><div><b>'+pp.name+'</b><br>'+pp.blurb+'</div></div>';
+  });
+  showOverlay(
+    '<h1>🀄 台灣十六張麻將</h1>'+
+    '<p style="text-align:center">你（坐莊位起）對戰三位個性不同的電腦牌友。先選難度，再開始！</p>'+
+    '<h2>難度</h2>'+
+    '<div id="start-diff" style="display:flex;gap:.5em;justify-content:center;margin:.4em 0;">'+
+      diffBtnHTML('easy','輕鬆','新手等級')+diffBtnHTML('normal','普通','一般牌咖')+diffBtnHTML('hard','高手','老師傅')+
+    '</div>'+
+    '<h2>你的對手</h2><div class="persona-pick">'+pHTML+'</div>'+
+    '<button class="bigbtn" id="ov-start">開始遊戲 ▶</button>'+
+    '<button class="bigbtn alt" id="ov-help2">怎麼玩 / 語音設定說明</button>'
+  );
+  wireStartDiff();
+  el('ov-start').onclick = function(){ unlockAudio(); hideOverlay(); startMatch(); };
+  el('ov-help2').onclick = function(){ showHelp(true); };
+}
+function diffBtnHTML(d,label,sub){
+  var on = settings.difficulty===d ? ' on':'';
+  return '<button class="tbtn diff'+on+'" data-sdiff="'+d+'" style="flex-direction:column;display:flex;">'+label+'<br><small>'+sub+'</small></button>';
+}
+function wireStartDiff(){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-sdiff]'), function(b){
+    b.onclick=function(){ settings.difficulty=b.getAttribute('data-sdiff'); saveSettings(); reflectDiff(); wireStartDiff(); 
+      Array.prototype.forEach.call(document.querySelectorAll('[data-sdiff]'),function(x){x.classList.toggle('on',x.getAttribute('data-sdiff')===settings.difficulty);}); };
+  });
+}
+
+function showHelp(fromStart){
+  showOverlay(
+    '<h1>怎麼玩</h1>'+
+    '<h2>目標</h2><p>湊成 5 組（順子或刻子）加 1 對眼，就能「胡牌」。輪到你時，點一張要打出的牌即可。</p>'+
+    '<h2>叫牌按鈕</h2><p>別家打出的牌若你用得到，畫面下方會出現大按鈕：<b>吃</b>（順子，只能吃上家）、<b>碰</b>（兩張湊三張）、<b>槓</b>（四張）、<b>胡</b>（胡牌）。不要時按 <b>過</b>。</p>'+
+    '<h2>提示</h2><p>開啟「提示」後，會幫你標出建議打的牌，並提示還差幾步聽牌。</p>'+
+    '<h2>難度</h2><p><b>輕鬆</b>＝新手對手；<b>普通</b>＝一般牌咖；<b>高手</b>＝會記牌、會防守的老師傅。三家難度一起調整。</p>'+
+    '<h2>🔊 語音設定（重要）</h2>'+
+    '<p>語音的「碰、槓、胡」是用瀏覽器內建的中文語音念出來的。</p>'+
+    '<p>・<b>iPad / iPhone</b>：通常內建中文語音，開啟即可。第一次請先點畫面一下解鎖聲音。</p>'+
+    '<p>・<b>Windows 電腦</b>：若沒聲音，多半是缺中文語音。請到「設定 → 時間與語言 → 語音 → 新增語音」安裝「中文(繁體，台灣)」，重開瀏覽器即可。沒安裝也能玩，只是改用畫面文字提示。</p>'+
+    '<p>・建議用 <b>Chrome</b> 或 <b>Edge</b> 瀏覽器效果最好。</p>'+
+    '<button class="bigbtn" id="ov-close">'+(fromStart?'返回':'開始玩')+'</button>'
+  );
+  el('ov-close').onclick = function(){ if(fromStart){ showStart(); } else { hideOverlay(); } };
+}
+
+/* ---------------- audio ---------------- */
+var actx=null, voices=[], zhVoice=null;
+function unlockAudio(){
+  try{
+    if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    if(window.speechSynthesis){ var u=new SpeechSynthesisUtterance(' '); u.volume=0; window.speechSynthesis.speak(u); }
+  }catch(e){}
+}
+function sound(kind){
+  if(!settings.sound || !actx) return;
+  try{
+    var now=actx.currentTime;
+    if(kind==='win'){
+      [0,4,7,12].forEach(function(semi,i){ beep(523.25*Math.pow(2,semi/12), now+i*0.12, 0.13, 'triangle', 0.18); });
+      return;
+    }
+    var o=actx.createOscillator(), g=actx.createGain();
+    if(kind==='discard'){ o.type='triangle'; o.frequency.value=320; g.gain.value=0.12; }
+    else if(kind==='meld'){ o.type='square'; o.frequency.value=420; g.gain.value=0.10; }
+    else { o.type='sine'; o.frequency.value=240; g.gain.value=0.06; } // draw
+    o.connect(g); g.connect(actx.destination);
+    g.gain.setValueAtTime(g.gain.value, now); g.gain.exponentialRampToValueAtTime(0.0001, now+0.12);
+    o.start(now); o.stop(now+0.13);
+  }catch(e){}
+}
+function beep(freq,start,dur,type,vol){
+  var o=actx.createOscillator(), g=actx.createGain();
+  o.type=type||'sine'; o.frequency.value=freq; o.connect(g); g.connect(actx.destination);
+  g.gain.setValueAtTime(vol||0.15,start); g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+  o.start(start); o.stop(start+dur+0.02);
+}
+function loadVoices(){
+  if(!window.speechSynthesis) return;
+  voices = window.speechSynthesis.getVoices();
+  zhVoice = voices.filter(function(v){ return /zh(-|_)?(TW|HK|CN|Hant|Hans)?/i.test(v.lang) || /Chinese|中文|普通|國語|粵/.test(v.name); })
+                  .sort(function(a,b){ return (/TW|Hant/i.test(b.lang)?1:0)-(/TW|Hant/i.test(a.lang)?1:0); })[0] || null;
+}
+function speak(text){
+  if(!settings.voice || !window.speechSynthesis) return;
+  try{
+    var u=new SpeechSynthesisUtterance(text);
+    if(zhVoice) u.voice=zhVoice;
+    u.lang = zhVoice ? zhVoice.lang : 'zh-TW';
+    u.rate=0.95; u.pitch=1.0; u.volume=1.0;
+    window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ---------------- controls ---------------- */
+function reflectDiff(){
+  Array.prototype.forEach.call(document.querySelectorAll('#diffgroup .diff'), function(b){
+    b.classList.toggle('on', b.getAttribute('data-diff')===settings.difficulty);
+  });
+}
+function reflectToggles(){
+  el('btn-assist').classList.toggle('on', settings.assist);
+  el('btn-sound').classList.toggle('on', settings.sound);
+  el('btn-voice').classList.toggle('on', settings.voice);
+}
+function wireControls(){
+  Array.prototype.forEach.call(document.querySelectorAll('#diffgroup .diff'), function(b){
+    b.onclick=function(){ settings.difficulty=b.getAttribute('data-diff'); saveSettings(); reflectDiff();
+      if(G) G.setDifficulty(settings.difficulty); };
+  });
+  el('btn-assist').onclick=function(){ settings.assist=!settings.assist; saveSettings(); reflectToggles();
+    if(currentAsk&&(currentAsk.phase==='turn'||currentAsk.phase==='discardOnly')){ var h=G.humanHint(); hintKind=settings.assist?h.suggest:null; renderHand(); }
+    renderStatus(); };
+  el('btn-sound').onclick=function(){ settings.sound=!settings.sound; saveSettings(); reflectToggles(); if(settings.sound){ unlockAudio(); sound('meld'); } };
+  el('btn-voice').onclick=function(){ settings.voice=!settings.voice; saveSettings(); reflectToggles(); if(settings.voice){ unlockAudio(); speak('語音開啟'); } };
+  el('btn-help').onclick=function(){ showHelp(false); };
+  el('btn-new').onclick=function(){ showStart(); };
+}
+
+/* ---------------- start ---------------- */
+function startMatch(){
+  G = new MJG.Game({
+    difficulty: settings.difficulty,
+    schedule: function(fn,ms){ return setTimeout(fn, ms==null?500:ms); },
+    emit: onEvent,
+    askHuman: onAsk
+  });
+  if(G.setDifficulty) G.setDifficulty(settings.difficulty);
+  G.newMatch();
+}
+
+function init(){
+  reflectDiff(); reflectToggles(); wireControls();
+  if(window.speechSynthesis){ loadVoices(); window.speechSynthesis.onvoiceschanged=loadVoices; }
+  document.addEventListener('pointerdown', function once(){ unlockAudio(); document.removeEventListener('pointerdown', once); }, {once:true});
+  showStart();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+})();
+//===APP_END===
+</script>
+</body>
+</html>
