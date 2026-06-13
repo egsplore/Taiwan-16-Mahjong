@@ -43,9 +43,9 @@ body{
   grid-template-columns:minmax(0,1fr) minmax(0,2.1fr) minmax(0,1fr);
   grid-template-rows:auto minmax(0,1fr) auto;
   grid-template-areas:"s2 s2 s2" "s3 ce s1" "s0 s0 s0";
-  gap:.4vmin; padding:.6vmin;
+  gap:.4vmin; padding:.6vmin; min-height:0; overflow:hidden;
 }
-.seat{padding:.5vmin; border-radius:12px; min-width:0;}
+.seat{padding:.5vmin; border-radius:12px; min-width:0; min-height:0; overflow:hidden;}
 #seat2{grid-area:s2;} #seat1{grid-area:s1;} #seat3{grid-area:s3;} #seat0{grid-area:s0;}
 #center{grid-area:ce; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6vmin; min-height:0;}
 .nameplate{display:flex;align-items:center;gap:.8vmin;justify-content:center;flex-wrap:wrap;}
@@ -100,6 +100,7 @@ body{
 #hand-wrap{display:flex;flex-direction:column;align-items:center;gap:.4vmin;width:100%;}
 .hand{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:.4vmin;
   background:rgba(0,0,0,.16);border-radius:14px;max-width:100%;}
+#myhand{flex:0 0 auto;display:flex;justify-content:center;padding:.3vmin .6vmin 0;max-width:100%;}
 #statusline{font-size:clamp(14px,2.4vmin,24px);font-weight:800;min-height:1.2em;text-align:center;}
 #statusline .ting{color:var(--hl);}
 #wallinfo{display:flex;flex-direction:column;align-items:center;gap:.3vmin;}
@@ -138,6 +139,21 @@ body{
 .persona{display:flex;gap:.7em;align-items:flex-start;background:#f1ecdb;border-radius:12px;padding:.6em;}
 .persona .av{font-size:2em;} .persona b{color:#0c5a3a;}
 .hidden{display:none!important;}
+@media (orientation:landscape){
+  :root{ --tile:clamp(18px,3vmin,36px); --tile-lg:clamp(30px,5vmin,56px); }
+  #topbar{padding:.3vmin 1vmin;}
+  #center{gap:.3vmin;}
+  #wallnum{font-size:clamp(18px,4.4vmin,38px);}
+  .discards{min-height:0;}
+  #statusline{min-height:1em;}
+  #actionbar{padding:.5vmin;}
+  .abtn{font-size:clamp(16px,3vmin,26px);padding:.7vmin 2.2vmin;}
+  .seat .tilerow{max-height:calc(var(--tile)*2.5);overflow:hidden;}
+}
+@media (orientation:landscape) and (max-height:480px){
+  :root{ --tile:16px; --tile-lg:24px; }
+  .abtn{font-size:16px;padding:.4vmin 1.4vmin;}
+}
 @media (orientation:portrait){
   #table{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,1fr);}
   :root{--tile:clamp(28px,4.6vmin,52px);}
@@ -169,6 +185,7 @@ body{
   <div class="seat" id="seat1"></div>
   <div class="seat" id="seat0"></div>
 </div>
+<div id="myhand"></div>
 <div id="statusline"></div>
 <div id="actionbar"></div>
 <div id="overlay"></div>
@@ -1086,8 +1103,8 @@ function renderSeat(s){
   disc+='</div>';
 
   if(s===0){
-    c.innerHTML = head + melds + fl +
-      '<div id="hand-wrap"><div class="hand" id="hand"></div></div>' + disc;
+    c.innerHTML = head + melds + fl + disc;
+    var mh = el('myhand'); if(mh) mh.innerHTML = '<div class="hand" id="hand"></div>';
     renderHand();
   } else {
     // opponent concealed hand as face-down count
