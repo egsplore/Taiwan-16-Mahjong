@@ -7,7 +7,7 @@
 <title>台灣十六張麻將</title>
 <style>
 :root{
-  --tile:clamp(34px,5.4vmin,60px);
+  --tile:clamp(40px,6.2vmin,72px);
   --tile-h:calc(var(--tile)*1.34);
   --tile-lg:clamp(46px,8.4vmin,84px);
   --tile-lg-h:calc(var(--tile-lg)*1.34);
@@ -47,6 +47,9 @@ body{
 }
 .seat{padding:.5vmin; border-radius:12px; min-width:0; min-height:0; overflow:hidden;}
 #seat2{grid-area:s2;} #seat1{grid-area:s1;} #seat3{grid-area:s3;} #seat0{grid-area:s0;}
+#seat2 .nameplate,#seat2 .tilerow,#seat2 .melds,#seat2 .discards{justify-content:center;}
+#seat1 .nameplate,#seat1 .tilerow,#seat1 .melds,#seat1 .discards{justify-content:flex-end;}
+.op-hand{flex-wrap:nowrap;overflow:hidden;max-width:100%;}
 #center{grid-area:ce; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6vmin; min-height:0;}
 .nameplate{display:flex;align-items:center;gap:.8vmin;justify-content:center;flex-wrap:wrap;}
 .nameplate.me{justify-content:flex-start;}
@@ -140,7 +143,7 @@ body{
 .persona .av{font-size:2em;} .persona b{color:#0c5a3a;}
 .hidden{display:none!important;}
 @media (orientation:landscape){
-  :root{ --tile:clamp(18px,3vmin,36px); --tile-lg:clamp(30px,5vmin,56px); }
+  :root{ --tile:clamp(28px,4.4vmin,52px); --tile-lg:clamp(34px,5.6vmin,64px); }
   #topbar{padding:.3vmin 1vmin;}
   #center{gap:.3vmin;}
   #wallnum{font-size:clamp(18px,4.4vmin,38px);}
@@ -1053,12 +1056,12 @@ function meldHTML(m){
   var html='<div class="meld">';
   if(m.type==='chow'){
     var b=MJ.kindToIndex(m.kind);
-    html+=tileHTML(MJ.indexToKind(b),{small:true})+tileHTML(MJ.indexToKind(b+1),{small:true})+tileHTML(MJ.indexToKind(b+2),{small:true});
+    html+=tileHTML(MJ.indexToKind(b),{})+tileHTML(MJ.indexToKind(b+1),{})+tileHTML(MJ.indexToKind(b+2),{});
   } else {
     var n=(m.type==='kong'||m.type==='akong')?4:3;
     for(var i=0;i<n;i++){
       var fd = (m.type==='akong' && (i===0||i===3)); // concealed kong: ends face down
-      html+=tileHTML(m.kind,{small:true, faceDown:fd});
+      html+=tileHTML(m.kind,{faceDown:fd});
     }
   }
   return html+'</div>';
@@ -1098,7 +1101,7 @@ function renderSeat(s){
   var disc='<div class="discards">';
   for(var d=0; d<p.discards.length; d++){
     var hl = (lastDiscardKey===s+'#'+d);
-    disc+=tileHTML(p.discards[d].k,{small:true, hl:hl});
+    disc+=tileHTML(p.discards[d].k,{hl:hl});
   }
   disc+='</div>';
 
@@ -1108,9 +1111,9 @@ function renderSeat(s){
     renderHand();
   } else {
     // opponent concealed hand as face-down count
-    var hand='<div class="tilerow">';
+    var hand='<div class="tilerow op-hand">';
     var cnt = p.hand.length;
-    for(var i=0;i<cnt;i++) hand+=tileHTML('', {faceDown:true, small:true});
+    for(var i=0;i<cnt;i++) hand+=tileHTML('', {faceDown:true});
     hand+='</div>';
     c.innerHTML = head + hand + melds + fl + disc;
   }
